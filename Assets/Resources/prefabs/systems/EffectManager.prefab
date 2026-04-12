@@ -44,6 +44,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ef94975f326e64b4f81947bf93dcb55e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EffectManager
-  effects: []
+  effects:
+  - name: water_splash
+    prefab: {fileID: 3223031359271505891, guid: 155410a7086d1d34ca48c448dfc33156, type: 3}
+    poolSize: 0
+    autoReturnToPool: 0
+    lifetime: 1
   poolParent: {fileID: 0}
   defaultPoolSize: 10
