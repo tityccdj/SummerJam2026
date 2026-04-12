@@ -65,6 +65,68 @@ public class RouteData
         return sampledPoints.ToArray();
     }
 
+    public Vector2 EvaluatePosition(float progress)
+    {
+        if (!IsValid())
+        {
+            return Vector2.zero;
+        }
+
+        int pointCount = points.Length;
+        int segmentCount = closed ? pointCount : pointCount - 1;
+        float normalizedProgress = closed ? Mathf.Repeat(progress, 1f) : Mathf.Clamp01(progress);
+        float scaledProgress = normalizedProgress * segmentCount;
+        int segmentIndex = Mathf.FloorToInt(scaledProgress);
+        float segmentT = scaledProgress - segmentIndex;
+
+        if (!closed && segmentIndex >= segmentCount)
+        {
+            segmentIndex = segmentCount - 1;
+            segmentT = 1f;
+        }
+
+        Vector2 p0 = GetPoint(segmentIndex - 1, closed);
+        Vector2 p1 = GetPoint(segmentIndex, closed);
+        Vector2 p2 = GetPoint(segmentIndex + 1, closed);
+        Vector2 p3 = GetPoint(segmentIndex + 2, closed);
+        return EvaluateCatmullRom(p0, p1, p2, p3, segmentT);
+    }
+
+    public Vector2 EvaluateTangent(float progress)
+    {
+        if (!IsValid())
+        {
+            return Vector2.right;
+        }
+
+        int pointCount = points.Length;
+        int segmentCount = closed ? pointCount : pointCount - 1;
+        float normalizedProgress = closed ? Mathf.Repeat(progress, 1f) : Mathf.Clamp01(progress);
+        float scaledProgress = normalizedProgress * segmentCount;
+        int segmentIndex = Mathf.FloorToInt(scaledProgress);
+        float segmentT = scaledProgress - segmentIndex;
+
+        if (!closed && segmentIndex >= segmentCount)
+        {
+            segmentIndex = segmentCount - 1;
+            segmentT = 1f;
+        }
+
+        Vector2 p0 = GetPoint(segmentIndex - 1, closed);
+        Vector2 p1 = GetPoint(segmentIndex, closed);
+        Vector2 p2 = GetPoint(segmentIndex + 1, closed);
+        Vector2 p3 = GetPoint(segmentIndex + 2, closed);
+
+        Vector2 tangent = EvaluateCatmullRomTangent(p0, p1, p2, p3, segmentT);
+        return tangent.sqrMagnitude > 0.0001f ? tangent.normalized : Vector2.right;
+    }
+
+    public Vector2 EvaluateNormal(float progress)
+    {
+        Vector2 tangent = EvaluateTangent(progress);
+        return new Vector2(-tangent.y, tangent.x);
+    }
+
     private Vector2 GetPoint(int index, bool loop)
     {
         int count = points.Length;
@@ -89,6 +151,17 @@ public class RouteData
             (-p0 + p2) * t +
             (2f * p0 - 5f * p1 + 4f * p2 - p3) * t2 +
             (-p0 + 3f * p1 - 3f * p2 + p3) * t3
+        );
+    }
+
+    private static Vector2 EvaluateCatmullRomTangent(Vector2 p0, Vector2 p1, Vector2 p2, Vector2 p3, float t)
+    {
+        float t2 = t * t;
+
+        return 0.5f * (
+            (-p0 + p2) +
+            2f * (2f * p0 - 5f * p1 + 4f * p2 - p3) * t +
+            3f * (-p0 + 3f * p1 - 3f * p2 + p3) * t2
         );
     }
 }

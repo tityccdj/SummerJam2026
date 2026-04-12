@@ -1,5 +1,6 @@
-using UnityEngine;
 using System.Collections.Generic;
+using UnityEngine;
+using UnityEngine.UI;
 
 public class SceneHelper : MonoBehaviour
 {
@@ -9,13 +10,30 @@ public class SceneHelper : MonoBehaviour
     [SerializeField] private int fallbackRouteId = 1;
     [SerializeField] private string rendererObjectName = "RoutesRenderer";
 
+    [Header("Gameplay Bootstrap")]
+    [SerializeField] private bool bootstrapPlayerSystems = true;
+    [SerializeField] private string playerTag = "Player";
+    [SerializeField] private string overHeatSliderName = "Slider (OverHeat)";
+
     private void Start()
     {
-        if (!createRouteRendererOnStart)
+        RoutesRenderer routesRenderer = null;
+
+        if (createRouteRendererOnStart)
+        {
+            routesRenderer = SetupRoutesRenderer();
+        }
+
+        if (!bootstrapPlayerSystems)
         {
             return;
         }
 
+        SetupPlayerSystems(routesRenderer != null ? routesRenderer : FindFirstObjectByType<RoutesRenderer>());
+    }
+
+    private RoutesRenderer SetupRoutesRenderer()
+    {
         RouteDatabase.Instance.LoadAllRoutes();
 
         RoutesRenderer routesRenderer = FindFirstObjectByType<RoutesRenderer>();
@@ -27,6 +45,150 @@ public class SceneHelper : MonoBehaviour
 
         routesRenderer.RouteId = GetRouteIdForSceneLoad();
         routesRenderer.Refresh();
+        return routesRenderer;
+    }
+
+    private void SetupPlayerSystems(RoutesRenderer routesRenderer)
+    {
+        GameObject playerObject = GameObject.FindGameObjectWithTag(playerTag);
+        if (playerObject == null)
+        {
+            return;
+        }
+
+        PlayerSplineRunner playerRunner = playerObject.GetComponent<PlayerSplineRunner>();
+        if (playerRunner == null)
+        {
+            playerRunner = playerObject.AddComponent<PlayerSplineRunner>();
+        }
+
+        Joystick joystick = FindFirstObjectByType<Joystick>();
+        if (joystick != null)
+        {
+            joystick.AxisOptions = AxisOptions.Horizontal;
+            joystick.SnapX = false;
+            joystick.SnapY = false;
+        }
+
+        Slider slider = FindOrCreateOverHeatSlider();
+        playerRunner.BindSceneReferences(routesRenderer, joystick, slider);
+
+        BindButtons(playerRunner);
+        BindCamera(playerObject.transform);
+    }
+
+    private void BindButtons(PlayerSplineRunner playerRunner)
+    {
+        Button[] buttons = FindObjectsByType<Button>(FindObjectsSortMode.None);
+        foreach (Button button in buttons)
+        {
+            if (button == null)
+            {
+                continue;
+            }
+
+            string buttonName = button.gameObject.name.ToLowerInvariant();
+
+            if (buttonName.Contains("pump"))
+            {
+                button.onClick.AddListener(playerRunner.PlayerRun);
+            }
+            else if (buttonName.Contains("cool"))
+            {
+                button.onClick.AddListener(playerRunner.CoolDown);
+            }
+        }
+    }
+
+    private void BindCamera(Transform playerTransform)
+    {
+        Camera mainCamera = Camera.main;
+        if (mainCamera == null)
+        {
+            return;
+        }
+
+        CameraFollow2D cameraFollow = mainCamera.GetComponent<CameraFollow2D>();
+        if (cameraFollow == null)
+        {
+            cameraFollow = mainCamera.gameObject.AddComponent<CameraFollow2D>();
+        }
+
+        cameraFollow.SetTarget(playerTransform);
+    }
+
+    private Slider FindOrCreateOverHeatSlider()
+    {
+        Slider slider = FindFirstObjectByType<Slider>();
+        if (slider != null)
+        {
+            return slider;
+        }
+
+        Canvas canvas = FindFirstObjectByType<Canvas>();
+        if (canvas == null)
+        {
+            return null;
+        }
+
+        GameObject sliderObject = new GameObject(overHeatSliderName, typeof(RectTransform), typeof(Slider));
+        sliderObject.transform.SetParent(canvas.transform, false);
+
+        RectTransform sliderRect = sliderObject.GetComponent<RectTransform>();
+        sliderRect.anchorMin = new Vector2(0.5f, 1f);
+        sliderRect.anchorMax = new Vector2(0.5f, 1f);
+        sliderRect.pivot = new Vector2(0.5f, 1f);
+        sliderRect.anchoredPosition = new Vector2(0f, -28f);
+        sliderRect.sizeDelta = new Vector2(320f, 28f);
+
+        GameObject background = CreateSliderGraphic("Background", sliderObject.transform, new Color(0.15f, 0.15f, 0.18f, 0.9f));
+        RectTransform backgroundRect = background.GetComponent<RectTransform>();
+        backgroundRect.anchorMin = Vector2.zero;
+        backgroundRect.anchorMax = Vector2.one;
+        backgroundRect.offsetMin = Vector2.zero;
+        backgroundRect.offsetMax = Vector2.zero;
+
+        GameObject fillArea = new GameObject("Fill Area", typeof(RectTransform));
+        fillArea.transform.SetParent(sliderObject.transform, false);
+        RectTransform fillAreaRect = fillArea.GetComponent<RectTransform>();
+        fillAreaRect.anchorMin = Vector2.zero;
+        fillAreaRect.anchorMax = Vector2.one;
+        fillAreaRect.offsetMin = new Vector2(4f, 4f);
+        fillAreaRect.offsetMax = new Vector2(-4f, -4f);
+
+        GameObject fill = CreateSliderGraphic("Fill", fillArea.transform, new Color(1f, 0.35f, 0.2f, 0.95f));
+        RectTransform fillRect = fill.GetComponent<RectTransform>();
+        fillRect.anchorMin = Vector2.zero;
+        fillRect.anchorMax = Vector2.one;
+        fillRect.offsetMin = Vector2.zero;
+        fillRect.offsetMax = Vector2.zero;
+
+        Slider createdSlider = sliderObject.GetComponent<Slider>();
+        createdSlider.direction = Slider.Direction.LeftToRight;
+        createdSlider.fillRect = fillRect;
+        createdSlider.targetGraphic = fill.GetComponent<Image>();
+        createdSlider.minValue = 0f;
+        createdSlider.maxValue = 100f;
+        createdSlider.value = 0f;
+
+        return createdSlider;
+    }
+
+    private static GameObject CreateSliderGraphic(string objectName, Transform parent, Color color)
+    {
+        GameObject graphicObject = new GameObject(objectName, typeof(RectTransform), typeof(Image));
+        graphicObject.transform.SetParent(parent, false);
+
+        Image image = graphicObject.GetComponent<Image>();
+        image.color = color;
+
+        RectTransform rectTransform = graphicObject.GetComponent<RectTransform>();
+        rectTransform.anchorMin = Vector2.zero;
+        rectTransform.anchorMax = Vector2.one;
+        rectTransform.offsetMin = Vector2.zero;
+        rectTransform.offsetMax = Vector2.zero;
+
+        return graphicObject;
     }
 
     private int GetRouteIdForSceneLoad()

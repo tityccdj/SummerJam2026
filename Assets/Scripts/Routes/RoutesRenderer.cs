@@ -25,6 +25,11 @@ public class RoutesRenderer : MonoBehaviour
         set => routeId = Mathf.Max(1, value);
     }
 
+    public RouteData GetRouteData()
+    {
+        return RouteDatabase.Instance.GetRoute(routeId);
+    }
+
     private void Awake()
     {
         if (refreshOnAwake)
