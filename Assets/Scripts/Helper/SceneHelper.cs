@@ -14,6 +14,8 @@ public class SceneHelper : MonoBehaviour
     [SerializeField] private bool bootstrapPlayerSystems = true;
     [SerializeField] private string playerTag = "Player";
     [SerializeField] private string overHeatSliderName = "Slider (OverHeat)";
+    [SerializeField] private int totalLapCount = 3;
+    [SerializeField] private int cpuRunnerCount = 4;
 
     private void Start()
     {
@@ -51,15 +53,14 @@ public class SceneHelper : MonoBehaviour
     private void SetupPlayerSystems(RoutesRenderer routesRenderer)
     {
         GameObject playerObject = GameObject.FindGameObjectWithTag(playerTag);
-        if (playerObject == null)
+        PlayerSplineRunner playerRunner = null;
+        if (playerObject != null)
         {
-            return;
-        }
-
-        PlayerSplineRunner playerRunner = playerObject.GetComponent<PlayerSplineRunner>();
-        if (playerRunner == null)
-        {
-            playerRunner = playerObject.AddComponent<PlayerSplineRunner>();
+            playerRunner = playerObject.GetComponent<PlayerSplineRunner>();
+            if (playerRunner == null)
+            {
+                playerRunner = playerObject.AddComponent<PlayerSplineRunner>();
+            }
         }
 
         Joystick joystick = FindFirstObjectByType<Joystick>();
@@ -71,14 +72,33 @@ public class SceneHelper : MonoBehaviour
         }
 
         Slider slider = FindOrCreateOverHeatSlider();
-        playerRunner.BindSceneReferences(routesRenderer, joystick, slider);
+        playerRunner.ConfigureRunner("Player", true, routesRenderer, joystick, slider, totalLapCount);
+        playerRunner.ResetRunnerState(0f, 0f);
 
-        BindButtons(playerRunner);
-        BindCamera(playerObject.transform);
+        RaceManager2D raceManager = SetupRaceManager(playerRunner, routesRenderer);
+        PlayerSplineRunner activeHumanRunner = raceManager != null && raceManager.HumanRunner != null
+            ? raceManager.HumanRunner
+            : playerRunner;
+
+        BindButtons(activeHumanRunner);
+
+        Transform cameraTarget = raceManager != null && raceManager.HumanRunner != null
+            ? raceManager.HumanRunner.transform
+            : playerObject != null ? playerObject.transform : null;
+
+        if (cameraTarget != null)
+        {
+            BindCamera(cameraTarget);
+        }
     }
 
     private void BindButtons(PlayerSplineRunner playerRunner)
     {
+        if (playerRunner == null)
+        {
+            return;
+        }
+
         Button[] buttons = FindObjectsByType<Button>(FindObjectsSortMode.None);
         foreach (Button button in buttons)
         {
@@ -89,7 +109,7 @@ public class SceneHelper : MonoBehaviour
 
             string buttonName = button.gameObject.name.ToLowerInvariant();
 
-            if (buttonName.Contains("pump"))
+            if (buttonName.Contains("pump") || buttonName.Contains("run"))
             {
                 button.onClick.AddListener(playerRunner.PlayerRun);
             }
@@ -98,6 +118,25 @@ public class SceneHelper : MonoBehaviour
                 button.onClick.AddListener(playerRunner.CoolDown);
             }
         }
+    }
+
+    private RaceManager2D SetupRaceManager(PlayerSplineRunner playerRunner, RoutesRenderer routesRenderer)
+    {
+        if (playerRunner == null || routesRenderer == null)
+        {
+            return null;
+        }
+
+        RaceManager2D raceManager = FindFirstObjectByType<RaceManager2D>();
+        if (raceManager == null)
+        {
+            GameObject raceManagerObject = new GameObject("RaceManager2D");
+            raceManager = raceManagerObject.AddComponent<RaceManager2D>();
+        }
+
+        raceManager.ConfigureRace(cpuRunnerCount, totalLapCount);
+        raceManager.SetupRace(playerRunner, routesRenderer, FindFirstObjectByType<Canvas>());
+        return raceManager;
     }
 
     private void BindCamera(Transform playerTransform)
