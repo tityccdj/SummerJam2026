@@ -54,6 +54,11 @@ public class SceneHelper : MonoBehaviour
 
     private void SetupPlayerSystems(RoutesRenderer routesRenderer)
     {
+        if (routesRenderer == null)
+        {
+            return;
+        }
+
         GameObject playerObject = GameObject.FindGameObjectWithTag(playerTag);
         PlayerSplineRunner playerRunner = null;
         if (playerObject != null)
@@ -74,13 +79,22 @@ public class SceneHelper : MonoBehaviour
         }
 
         Slider slider = FindOrCreateOverHeatSlider();
-        playerRunner.ConfigureRunner("Player", true, routesRenderer, joystick, slider, totalLapCount);
-        playerRunner.ResetRunnerState(0f, 0f);
+        if (playerRunner != null)
+        {
+            playerRunner.ConfigureRunner("Player", true, routesRenderer, joystick, slider, totalLapCount);
+            playerRunner.ResetRunnerState(0f, 0f);
+        }
 
         RaceManager2D raceManager = SetupRaceManager(playerRunner, routesRenderer);
         PlayerSplineRunner activeHumanRunner = raceManager != null && raceManager.HumanRunner != null
             ? raceManager.HumanRunner
             : playerRunner;
+
+        if (activeHumanRunner != null && activeHumanRunner != playerRunner)
+        {
+            activeHumanRunner.ConfigureRunner("Player", true, routesRenderer, joystick, slider, totalLapCount);
+            activeHumanRunner.ResetRunnerState(0f, 0f);
+        }
 
         BindButtons(activeHumanRunner);
 
@@ -124,7 +138,7 @@ public class SceneHelper : MonoBehaviour
 
     private RaceManager2D SetupRaceManager(PlayerSplineRunner playerRunner, RoutesRenderer routesRenderer)
     {
-        if (playerRunner == null || routesRenderer == null)
+        if (routesRenderer == null)
         {
             return null;
         }

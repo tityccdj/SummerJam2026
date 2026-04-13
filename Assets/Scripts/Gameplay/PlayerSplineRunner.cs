@@ -9,18 +9,28 @@ public class PlayerSplineRunner : MonoBehaviour
     private const string RoundSoundName = "round";
     private const string WinSoundName = "win";
     private const string HumanGaspChannel = "player_gasp";
+    private const string DefaultAnimationControllerPath = "animations/racer";
+    private const string IdleAnimationStateName = "idle";
+    private const string RunAnimationStateName = "run";
+    private const string OverheatAnimationStateName = "overheat";
 
     [Header("Scene References")]
     [SerializeField] private RoutesRenderer routesRenderer;
     [SerializeField] private Joystick joystick;
     [SerializeField] private Slider overheatSlider;
     [SerializeField] private SpriteRenderer spriteRenderer;
+    [SerializeField] private Animator animator;
 
     [Header("Runner")]
     [SerializeField] private string runnerName = "Runner";
     [SerializeField] private bool isHuman = true;
     [SerializeField] private int targetLapCount = 3;
     [SerializeField] private bool screenSpaceLateralControls = true;
+    [SerializeField] private bool useAnimationSet = true;
+    [SerializeField] private string animationControllerResourcesPath = DefaultAnimationControllerPath;
+    [SerializeField] private float runAnimationSpeedThreshold = 0.02f;
+    [SerializeField] private float collisionAnimationDuration = 0.45f;
+    [SerializeField] private float tangentFlipThreshold = 0.001f;
 
     [Header("Movement")]
     [SerializeField] private float pumpImpulse = 0.1f;
@@ -101,6 +111,10 @@ public class PlayerSplineRunner : MonoBehaviour
     private float randomHeatTimer;
     private float randomHeatCooldown;
     private bool raceActive = true;
+    private float collisionAnimationTimer;
+    private string currentAnimationState;
+    private float currentFacingTangentX;
+    private bool defaultSpriteFlipX;
 
     public string RunnerName => runnerName;
     public bool IsHuman => isHuman;
@@ -153,6 +167,9 @@ public class PlayerSplineRunner : MonoBehaviour
         hazardDropTimer = 0f;
         randomHeatTimer = 0f;
         randomHeatCooldown = GetNextRandomHeatCooldown();
+        collisionAnimationTimer = 0f;
+        currentAnimationState = null;
+        currentFacingTangentX = currentRouteTangent.x;
         ResetAiState();
         SyncSlider();
         SnapToRoute();
@@ -236,6 +253,7 @@ public class PlayerSplineRunner : MonoBehaviour
         currentOverHeat = Mathf.Clamp(currentOverHeat + heatAmount, 0f, maxOverHeat);
         currentHeatMultiplier = Mathf.Max(currentHeatMultiplier, heatMultiplier);
         heatMultiplierTimer = Mathf.Max(heatMultiplierTimer, multiplierDuration);
+        TriggerCollisionAnimation();
 
         if (currentOverHeat >= maxOverHeat)
         {
@@ -251,6 +269,7 @@ public class PlayerSplineRunner : MonoBehaviour
         currentOverHeat = maxOverHeat;
         isOverHeated = true;
         rearHitImmunityTimer = Mathf.Max(rearHitImmunityTimer, immunityDuration);
+        TriggerCollisionAnimation(immunityDuration);
         RefreshHumanOverheatAudio();
         SyncSlider();
     }
@@ -258,6 +277,7 @@ public class PlayerSplineRunner : MonoBehaviour
     public void ApplyRearHitEffect(float speedBoostAmount, float duration, float heatMultiplier, float extraHeat)
     {
         forwardSpeed = Mathf.Min(maxForwardSpeed * 1.45f, forwardSpeed + speedBoostAmount);
+        TriggerCollisionAnimation(duration);
         ApplyExternalHeat(extraHeat, heatMultiplier, duration);
         rearHitImmunityTimer = Mathf.Max(rearHitImmunityTimer, duration * 0.5f);
     }
@@ -318,8 +338,16 @@ public class PlayerSplineRunner : MonoBehaviour
             spriteRenderer = GetComponent<SpriteRenderer>();
         }
 
+        if (animator == null)
+        {
+            animator = GetComponent<Animator>();
+        }
+
+        EnsureAnimatorReady();
+
         if (spriteRenderer != null)
         {
+            defaultSpriteFlipX = spriteRenderer.flipX;
             defaultColor = spriteRenderer.color;
         }
     }
@@ -343,6 +371,11 @@ public class PlayerSplineRunner : MonoBehaviour
         if (rearHitImmunityTimer > 0f)
         {
             rearHitImmunityTimer -= Time.deltaTime;
+        }
+
+        if (collisionAnimationTimer > 0f)
+        {
+            collisionAnimationTimer -= Time.deltaTime;
         }
 
         if (hazardDropTimer > 0f)
@@ -395,7 +428,6 @@ public class PlayerSplineRunner : MonoBehaviour
 
         float offsetLimit = Mathf.Max(0.15f, route.trackWidth * lateralTrackPadding * 0.5f);
         float signedHorizontalInput = ResolveScreenConsistentHorizontal(horizontalInput, route);
-
         if (Mathf.Abs(signedHorizontalInput) > 0.01f)
         {
             lateralOffset += signedHorizontalInput * lateralMoveSpeed * Time.deltaTime;
@@ -407,15 +439,11 @@ public class PlayerSplineRunner : MonoBehaviour
         Vector2 routeNormal = route.EvaluateNormal(progress);
         Vector2 routeTangent = route.EvaluateTangent(progress);
         currentRouteTangent = routeTangent.sqrMagnitude > 0.001f ? routeTangent.normalized : Vector2.right;
+        currentFacingTangentX = currentRouteTangent.x;
         Vector2 finalPosition = routePosition + routeNormal * lateralOffset;
 
         transform.position = new Vector3(finalPosition.x, finalPosition.y, transform.position.z);
-
-        if (routeTangent.sqrMagnitude > 0.001f)
-        {
-            float angle = Mathf.Atan2(routeTangent.y, routeTangent.x) * Mathf.Rad2Deg;
-            transform.rotation = Quaternion.Euler(0f, 0f, angle);
-        }
+        transform.rotation = Quaternion.identity;
 
         if (!hasProgressSample)
         {
@@ -633,6 +661,9 @@ public class PlayerSplineRunner : MonoBehaviour
 
     private void UpdateVisuals()
     {
+        UpdateAnimationState();
+        UpdateSpriteFacing();
+
         if (spriteRenderer == null)
         {
             return;
@@ -678,6 +709,10 @@ public class PlayerSplineRunner : MonoBehaviour
         Vector2 routePosition = route.EvaluatePosition(progress);
         Vector2 routeNormal = route.EvaluateNormal(progress);
         currentRouteTangent = route.EvaluateTangent(progress);
+        if (currentRouteTangent.sqrMagnitude > 0.001f)
+        {
+            currentFacingTangentX = currentRouteTangent.normalized.x;
+        }
         Vector2 finalPosition = routePosition + routeNormal * lateralOffset;
         transform.position = new Vector3(finalPosition.x, finalPosition.y, transform.position.z);
     }
@@ -718,5 +753,84 @@ public class PlayerSplineRunner : MonoBehaviour
         }
 
         AudioManager.Instance.StopLoop(HumanGaspChannel);
+    }
+
+    private void EnsureAnimatorReady()
+    {
+        if (!useAnimationSet)
+        {
+            return;
+        }
+
+        if (animator == null)
+        {
+            animator = gameObject.AddComponent<Animator>();
+        }
+
+        if (animator.runtimeAnimatorController != null)
+        {
+            return;
+        }
+
+        RuntimeAnimatorController controller = Resources.Load<RuntimeAnimatorController>(animationControllerResourcesPath);
+        if (controller != null)
+        {
+            animator.runtimeAnimatorController = controller;
+        }
+    }
+
+    private void TriggerCollisionAnimation(float durationOverride = -1f)
+    {
+        float duration = durationOverride > 0f ? durationOverride : collisionAnimationDuration;
+        collisionAnimationTimer = Mathf.Max(collisionAnimationTimer, duration);
+    }
+
+    private void UpdateAnimationState()
+    {
+        if (!useAnimationSet)
+        {
+            return;
+        }
+
+        EnsureAnimatorReady();
+        if (animator == null || animator.runtimeAnimatorController == null)
+        {
+            return;
+        }
+
+        string targetState = IdleAnimationStateName;
+        if (collisionAnimationTimer > 0f || isOverHeated)
+        {
+            targetState = OverheatAnimationStateName;
+        }
+        else if (raceActive && !isFinished && Mathf.Abs(forwardSpeed) > runAnimationSpeedThreshold)
+        {
+            targetState = RunAnimationStateName;
+        }
+
+        if (currentAnimationState == targetState)
+        {
+            return;
+        }
+
+        animator.Play(targetState, 0, 0f);
+        currentAnimationState = targetState;
+    }
+
+    private void UpdateSpriteFacing()
+    {
+        if (spriteRenderer == null)
+        {
+            return;
+        }
+
+        if (currentFacingTangentX >= tangentFlipThreshold)
+        {
+            spriteRenderer.flipX = defaultSpriteFlipX;
+        }
+        else if (currentFacingTangentX <= -tangentFlipThreshold)
+        {
+            spriteRenderer.flipX = !defaultSpriteFlipX;
+        }
     }
 }

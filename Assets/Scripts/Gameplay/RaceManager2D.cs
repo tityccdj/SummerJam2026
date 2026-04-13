@@ -17,6 +17,7 @@ public class RaceManager2D : MonoBehaviour
     [SerializeField] private int lapCount = 3;
     [SerializeField] private float startProgressSpacing = 0.018f;
     [SerializeField] private float laneSpacing = 0.42f;
+    [SerializeField] private string playerPrefabResourcesPath = "characters/Player";
     [SerializeField] private string characterPrefabResourcesPath = "prefabs/character";
     [SerializeField] private float hazardLifetime = 7f;
     [SerializeField] private float hazardRadius = 0.75f;
@@ -138,7 +139,7 @@ public class RaceManager2D : MonoBehaviour
 
     private PlayerSplineRunner CreateOrUsePlayerRunner(PlayerSplineRunner existingRunner, RoutesRenderer routesRenderer)
     {
-        GameObject playerPrefab = LoadCharacterPrefab(0);
+        GameObject playerPrefab = LoadPlayerPrefab();
         PlayerSplineRunner resolvedRunner = null;
 
         if (playerPrefab != null)
@@ -164,7 +165,7 @@ public class RaceManager2D : MonoBehaviour
 
         if (resolvedRunner == null)
         {
-            Debug.LogWarning("[RaceManager2D] Player prefab 'Resources/prefabs/character/0' was not found and there is no fallback player in the scene.");
+            Debug.LogWarning("[RaceManager2D] Player prefab was not found in Resources and there is no fallback player in the scene.");
         }
 
         return resolvedRunner;
@@ -756,29 +757,34 @@ public class RaceManager2D : MonoBehaviour
         }
 
         targetRunner.transform.localScale = referenceRunner.transform.localScale;
-
-        SpriteRenderer referenceRenderer = referenceRunner.GetComponent<SpriteRenderer>();
-        SpriteRenderer targetRenderer = targetRunner.GetComponent<SpriteRenderer>();
-        if (referenceRenderer == null || targetRenderer == null)
-        {
-            return;
-        }
-
-        Vector2 referenceSize = referenceRenderer.sprite != null ? referenceRenderer.sprite.bounds.size : Vector2.one;
-        Vector2 targetSize = targetRenderer.sprite != null ? targetRenderer.sprite.bounds.size : Vector2.one;
-
-        if (referenceSize.y <= 0.0001f || targetSize.y <= 0.0001f)
-        {
-            return;
-        }
-
-        float heightRatio = referenceSize.y / targetSize.y;
-        targetRunner.transform.localScale *= heightRatio;
     }
 
     private GameObject LoadCharacterPrefab(int prefabIndex)
     {
-        return Resources.Load<GameObject>($"{characterPrefabResourcesPath}/{prefabIndex}");
+        GameObject prefab = Resources.Load<GameObject>($"{characterPrefabResourcesPath}/{prefabIndex}");
+        if (prefab != null)
+        {
+            return prefab;
+        }
+
+        return Resources.Load<GameObject>($"characters/{prefabIndex}");
+    }
+
+    private GameObject LoadPlayerPrefab()
+    {
+        GameObject prefab = Resources.Load<GameObject>(playerPrefabResourcesPath);
+        if (prefab != null)
+        {
+            return prefab;
+        }
+
+        prefab = Resources.Load<GameObject>("characters/Player");
+        if (prefab != null)
+        {
+            return prefab;
+        }
+
+        return LoadCharacterPrefab(0);
     }
 
     private static class SquareSpriteCache
