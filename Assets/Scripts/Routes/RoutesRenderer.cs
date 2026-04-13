@@ -11,12 +11,16 @@ public class RoutesRenderer : MonoBehaviour
     [SerializeField] private float widthMultiplier = 1f;
     [SerializeField] private Color trackColor = new Color(0.16f, 0.16f, 0.18f, 1f);
     [SerializeField] private Color centerLineColor = new Color(0.95f, 0.84f, 0.26f, 1f);
+    [SerializeField] private Color startLineColor = Color.white;
     [SerializeField] private float centerLineWidth = 0.18f;
+    [SerializeField] private float startLineWidth = 0.28f;
     [SerializeField] private int sortingOrder = 0;
     [SerializeField] private int centerLineSortingOrder = 1;
+    [SerializeField] private int startLineSortingOrder = 2;
 
     private LineRenderer trackRenderer;
     private LineRenderer centerLineRenderer;
+    private LineRenderer startLineRenderer;
     private Material sharedLineMaterial;
 
     public int RouteId
@@ -57,6 +61,7 @@ public class RoutesRenderer : MonoBehaviour
 
         ApplyToRenderer(trackRenderer, splinePoints, route.trackWidth * widthMultiplier, trackColor, sortingOrder, route.closed);
         ApplyToRenderer(centerLineRenderer, splinePoints, centerLineWidth, centerLineColor, centerLineSortingOrder, route.closed);
+        ApplyStartLine(route);
     }
 
     private void EnsureRenderers()
@@ -79,6 +84,11 @@ public class RoutesRenderer : MonoBehaviour
         if (centerLineRenderer == null)
         {
             centerLineRenderer = GetOrCreateRenderer("CenterLine");
+        }
+
+        if (startLineRenderer == null)
+        {
+            startLineRenderer = GetOrCreateRenderer("StartLine");
         }
     }
 
@@ -110,6 +120,26 @@ public class RoutesRenderer : MonoBehaviour
         renderer.useWorldSpace = false;
 
         return renderer;
+    }
+
+    private void ApplyStartLine(RouteData route)
+    {
+        if (startLineRenderer == null || route == null || !route.IsValid())
+        {
+            return;
+        }
+
+        Vector2 center = route.EvaluatePosition(0f);
+        Vector2 normal = route.EvaluateNormal(0f).normalized;
+        float halfWidth = route.trackWidth * widthMultiplier * 0.5f;
+
+        Vector3[] points =
+        {
+            new Vector3(center.x - normal.x * halfWidth, center.y - normal.y * halfWidth, 0f),
+            new Vector3(center.x + normal.x * halfWidth, center.y + normal.y * halfWidth, 0f)
+        };
+
+        ApplyToRenderer(startLineRenderer, points, startLineWidth, startLineColor, startLineSortingOrder, false);
     }
 
     private void ApplyToRenderer(LineRenderer renderer, Vector3[] points, float width, Color color, int rendererSortingOrder, bool loop)

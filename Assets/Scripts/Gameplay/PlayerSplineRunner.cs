@@ -4,6 +4,12 @@ using UnityEngine.UI;
 [DisallowMultipleComponent]
 public class PlayerSplineRunner : MonoBehaviour
 {
+    private const string StepSoundName = "step";
+    private const string GaspSoundName = "gasp";
+    private const string RoundSoundName = "round";
+    private const string WinSoundName = "win";
+    private const string HumanGaspChannel = "player_gasp";
+
     [Header("Scene References")]
     [SerializeField] private RoutesRenderer routesRenderer;
     [SerializeField] private Joystick joystick;
@@ -31,6 +37,12 @@ public class PlayerSplineRunner : MonoBehaviour
     [SerializeField] private float passiveCoolRate = 6f;
     [SerializeField] private float coolDownTapAmount = 9f;
     [SerializeField] private float overHeatRecoverThreshold = 35f;
+    [SerializeField] private float globalSpeedMultiplier = 0.9f;
+    [SerializeField] private float overHeatTopSpeedMultiplier = 0.42f;
+    [SerializeField] private float overHeatAccelerationMultiplier = 0.12f;
+    [SerializeField] private float randomHeatBurstChance = 0.82f;
+    [SerializeField] private Vector2 randomHeatBurstIntervalRange = new Vector2(1.1f, 2.3f);
+    [SerializeField] private Vector2 randomHeatBurstAmountRange = new Vector2(10f, 22f);
     [SerializeField] private Color overHeatColor = new Color(1f, 0.3f, 0.3f, 1f);
     [SerializeField] private float flashSpeed = 14f;
 
@@ -86,6 +98,9 @@ public class PlayerSplineRunner : MonoBehaviour
     private float currentHeatMultiplier = 1f;
     private float heatMultiplierTimer;
     private float rearHitImmunityTimer;
+    private float randomHeatTimer;
+    private float randomHeatCooldown;
+    private bool raceActive = true;
 
     public string RunnerName => runnerName;
     public bool IsHuman => isHuman;
@@ -98,6 +113,8 @@ public class PlayerSplineRunner : MonoBehaviour
     public float CurrentForwardSpeed => forwardSpeed;
     public Vector2 CurrentRouteTangent => currentRouteTangent;
     public bool CanReceiveRearHit => rearHitImmunityTimer <= 0f && !isFinished;
+    public event System.Action<PlayerSplineRunner> LapCompleted;
+    public event System.Action<PlayerSplineRunner> RaceFinished;
 
     public void BindSceneReferences(RoutesRenderer renderer, Joystick movementJoystick, Slider heatSlider)
     {
@@ -134,10 +151,13 @@ public class PlayerSplineRunner : MonoBehaviour
         heatMultiplierTimer = 0f;
         rearHitImmunityTimer = 0f;
         hazardDropTimer = 0f;
+        randomHeatTimer = 0f;
+        randomHeatCooldown = GetNextRandomHeatCooldown();
         ResetAiState();
         SyncSlider();
         SnapToRoute();
         UpdateVisuals();
+        StopHumanGaspLoop();
     }
 
     public void SetTargetLapCount(int totalLaps)
@@ -145,9 +165,19 @@ public class PlayerSplineRunner : MonoBehaviour
         targetLapCount = Mathf.Max(1, totalLaps);
     }
 
+    public void SetRaceActive(bool active)
+    {
+        raceActive = active;
+        if (!raceActive)
+        {
+            forwardSpeed = 0f;
+            StopHumanGaspLoop();
+        }
+    }
+
     public void PlayerRun()
     {
-        if (isFinished || isOverHeated)
+        if (!raceActive || isFinished || isOverHeated)
         {
             return;
         }
@@ -160,11 +190,22 @@ public class PlayerSplineRunner : MonoBehaviour
             isOverHeated = true;
         }
 
+        if (isHuman)
+        {
+            AudioManager.Instance?.PlaySFXWithPitchVariation(StepSoundName, 0.08f);
+        }
+
+        RefreshHumanOverheatAudio();
         SyncSlider();
     }
 
     public void CoolDown()
     {
+        if (!raceActive || isFinished)
+        {
+            return;
+        }
+
         currentOverHeat = Mathf.Max(0f, currentOverHeat - coolDownTapAmount);
 
         if (isOverHeated && currentOverHeat <= overHeatRecoverThreshold)
@@ -172,6 +213,7 @@ public class PlayerSplineRunner : MonoBehaviour
             isOverHeated = false;
         }
 
+        RefreshHumanOverheatAudio();
         SyncSlider();
     }
 
@@ -200,6 +242,16 @@ public class PlayerSplineRunner : MonoBehaviour
             isOverHeated = true;
         }
 
+        RefreshHumanOverheatAudio();
+        SyncSlider();
+    }
+
+    public void TriggerInstantOverheat(float immunityDuration = 0.45f)
+    {
+        currentOverHeat = maxOverHeat;
+        isOverHeated = true;
+        rearHitImmunityTimer = Mathf.Max(rearHitImmunityTimer, immunityDuration);
+        RefreshHumanOverheatAudio();
         SyncSlider();
     }
 
@@ -227,6 +279,15 @@ public class PlayerSplineRunner : MonoBehaviour
         RouteData route = routesRenderer != null ? routesRenderer.GetRouteData() : null;
         if (route == null)
         {
+            return;
+        }
+
+        if (!raceActive)
+        {
+            forwardSpeed = 0f;
+            RefreshHumanOverheatAudio();
+            UpdateVisuals();
+            SyncSlider();
             return;
         }
 
@@ -289,21 +350,43 @@ public class PlayerSplineRunner : MonoBehaviour
             hazardDropTimer -= Time.deltaTime;
         }
 
+        randomHeatTimer += Time.deltaTime;
+        if (!isFinished && randomHeatTimer >= randomHeatCooldown)
+        {
+            randomHeatTimer = 0f;
+            randomHeatCooldown = GetNextRandomHeatCooldown();
+
+            if (Random.value <= randomHeatBurstChance)
+            {
+                float extraHeat = Random.Range(randomHeatBurstAmountRange.x, randomHeatBurstAmountRange.y);
+                ApplyExternalHeat(extraHeat, 1f, 0f);
+            }
+        }
+
         if (isOverHeated && currentOverHeat <= overHeatRecoverThreshold)
         {
             isOverHeated = false;
         }
+
+        RefreshHumanOverheatAudio();
     }
 
     private void UpdateMovement(RouteData route)
     {
         float forwardInput = isHuman ? GetHumanForwardInput() : GetCpuForwardInput();
         float horizontalInput = isHuman ? GetHumanHorizontalInput() : GetCpuHorizontalInput();
-        float accelerationScale = isOverHeated ? 0.15f : 1f;
+        float accelerationScale = isOverHeated ? overHeatAccelerationMultiplier : 1f;
+        float targetTopSpeed = maxForwardSpeed * globalSpeedMultiplier * (isOverHeated ? overHeatTopSpeedMultiplier : 1f);
+        float reverseSpeedLimit = maxForwardSpeed * globalSpeedMultiplier * 0.2f;
+        float sprintCap = targetTopSpeed * 1.45f;
 
         forwardSpeed += forwardInput * joystickAcceleration * accelerationScale * Time.deltaTime;
-        forwardSpeed = Mathf.Clamp(forwardSpeed, -maxForwardSpeed * 0.2f, maxForwardSpeed * 1.45f);
+        forwardSpeed = Mathf.Clamp(forwardSpeed, -reverseSpeedLimit, sprintCap);
         forwardSpeed = Mathf.MoveTowards(forwardSpeed, 0f, speedDamping * Time.deltaTime);
+        if (forwardSpeed > targetTopSpeed)
+        {
+            forwardSpeed = Mathf.MoveTowards(forwardSpeed, targetTopSpeed, speedDamping * 1.8f * Time.deltaTime);
+        }
 
         float previousProgress = progress;
         progress = route.closed
@@ -316,10 +399,6 @@ public class PlayerSplineRunner : MonoBehaviour
         if (Mathf.Abs(signedHorizontalInput) > 0.01f)
         {
             lateralOffset += signedHorizontalInput * lateralMoveSpeed * Time.deltaTime;
-        }
-        else
-        {
-            lateralOffset = Mathf.MoveTowards(lateralOffset, 0f, lateralReturnSpeed * Time.deltaTime);
         }
 
         lateralOffset = Mathf.Clamp(lateralOffset, -offsetLimit, offsetLimit);
@@ -355,6 +434,12 @@ public class PlayerSplineRunner : MonoBehaviour
         if (lastProgressSample > 0.85f && progress < 0.15f && forwardSpeed > 0f)
         {
             completedLaps++;
+            LapCompleted?.Invoke(this);
+            if (isHuman)
+            {
+                AudioManager.Instance?.PlaySFXOneShot(RoundSoundName);
+            }
+
             if (completedLaps >= targetLapCount)
             {
                 FinishRace();
@@ -369,6 +454,12 @@ public class PlayerSplineRunner : MonoBehaviour
         isFinished = true;
         finishTime = Time.time;
         forwardSpeed = 0f;
+        StopHumanGaspLoop();
+        RaceFinished?.Invoke(this);
+        if (isHuman)
+        {
+            AudioManager.Instance?.PlaySFXOneShot(WinSoundName);
+        }
     }
 
     private float GetHumanForwardInput()
@@ -535,6 +626,11 @@ public class PlayerSplineRunner : MonoBehaviour
         aiDropCooldown = Random.Range(aiDropIntervalRange.x, aiDropIntervalRange.y);
     }
 
+    private float GetNextRandomHeatCooldown()
+    {
+        return Random.Range(randomHeatBurstIntervalRange.x, randomHeatBurstIntervalRange.y);
+    }
+
     private void UpdateVisuals()
     {
         if (spriteRenderer == null)
@@ -588,12 +684,39 @@ public class PlayerSplineRunner : MonoBehaviour
 
     private void QueueHazardDrop()
     {
-        if (hazardDropTimer > 0f || isFinished)
+        if (!raceActive || hazardDropTimer > 0f || isFinished)
         {
             return;
         }
 
         hasPendingHazardDrop = true;
         hazardDropTimer = hazardDropCooldown;
+    }
+
+    private void RefreshHumanOverheatAudio()
+    {
+        if (!isHuman || AudioManager.Instance == null)
+        {
+            return;
+        }
+
+        if (raceActive && !isFinished && isOverHeated)
+        {
+            AudioManager.Instance.PlayLoop(GaspSoundName, HumanGaspChannel);
+        }
+        else
+        {
+            StopHumanGaspLoop();
+        }
+    }
+
+    private void StopHumanGaspLoop()
+    {
+        if (!isHuman || AudioManager.Instance == null)
+        {
+            return;
+        }
+
+        AudioManager.Instance.StopLoop(HumanGaspChannel);
     }
 }

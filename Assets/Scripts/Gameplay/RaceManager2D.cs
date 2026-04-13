@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using System.Collections;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -7,6 +8,10 @@ using UnityEngine.UI;
 [DisallowMultipleComponent]
 public class RaceManager2D : MonoBehaviour
 {
+    private const string CountSoundName = "count";
+    private const string RaceSoundName = "race";
+    private const string FailSoundName = "fail";
+
     [Header("Race")]
     [SerializeField] private int cpuRunnerCount = 4;
     [SerializeField] private int lapCount = 3;
@@ -23,18 +28,41 @@ public class RaceManager2D : MonoBehaviour
     [SerializeField] private float rearHitBoostDuration = 2f;
     [SerializeField] private float rearHitHeatMultiplier = 1.55f;
     [SerializeField] private float rearHitHeatAmount = 10f;
+    [SerializeField] private float rearHitCameraShakeMagnitude = 0.13f;
+    [SerializeField] private float rearHitCameraShakeDuration = 0.22f;
+    [SerializeField] private float runnerCollisionDistance = 0.55f;
+    [SerializeField] private float runnerCollisionCameraShakeMagnitude = 0.18f;
+    [SerializeField] private float runnerCollisionCameraShakeDuration = 0.28f;
+    [SerializeField] private int obstacleCount = 18;
+    [SerializeField] private string obstaclePrefabResourcesPath = "prefabs/obstacles";
+    [SerializeField] private int obstaclePrefabMinIndex = 0;
+    [SerializeField] private int obstaclePrefabMaxIndex = 10;
+    [SerializeField] private float obstacleScale = 0.85f;
+    [SerializeField] private float obstacleRadius = 0.42f;
+    [SerializeField] private float obstacleSpawnPaddingRatio = 0.72f;
+    [SerializeField] private float obstacleSpacing = 0.95f;
+    [SerializeField] private float obstacleScreenExitDuration = 0.65f;
 
     [Header("UI")]
     [SerializeField] private string rankTextName = "Text (Rank)";
     [SerializeField] private string lapTextName = "Text (Lap)";
+    [SerializeField] private string countDownTextName = "CountDownText";
     [SerializeField] private string runnerNameTextPrefix = "Text (Runner)";
+    [SerializeField] private string uiFontResourcesPath = "fonts/troika SDF";
+    [SerializeField] private float countDownStepDuration = 0.9f;
+    [SerializeField] private float goTextDuration = 0.75f;
 
     private readonly List<PlayerSplineRunner> runners = new List<PlayerSplineRunner>();
     private readonly List<RaceHazard2D> activeHazards = new List<RaceHazard2D>();
+    private readonly List<RaceObstacle2D> activeObstacles = new List<RaceObstacle2D>();
     private TextMeshProUGUI rankText;
     private TextMeshProUGUI lapText;
+    private TextMeshProUGUI countDownText;
     private PlayerSplineRunner humanRunner;
     private Canvas uiCanvas;
+    private CameraFollow2D cameraFollow;
+    private Coroutine countdownRoutine;
+    private TMP_FontAsset uiFont;
 
     public PlayerSplineRunner HumanRunner => humanRunner;
 
@@ -53,7 +81,9 @@ public class RaceManager2D : MonoBehaviour
 
         runners.Clear();
         activeHazards.Clear();
+        ClearObstacles();
         uiCanvas = canvas != null ? canvas : FindFirstObjectByType<Canvas>();
+        cameraFollow = Camera.main != null ? Camera.main.GetComponent<CameraFollow2D>() : null;
 
         RouteData route = routesRenderer.GetRouteData();
         float trackWidth = route != null ? route.trackWidth : 2.5f;
@@ -80,6 +110,14 @@ public class RaceManager2D : MonoBehaviour
             }
         }
 
+        SpawnObstacles(route);
+        SetAllRunnersRaceActive(false);
+        if (countdownRoutine != null)
+        {
+            StopCoroutine(countdownRoutine);
+        }
+
+        countdownRoutine = StartCoroutine(PlayCountdown());
         UpdateUi();
     }
 
@@ -93,6 +131,8 @@ public class RaceManager2D : MonoBehaviour
         UpdateHazardDrops();
         UpdateHazardHits();
         UpdateRearHits();
+        UpdateRunnerCollisions();
+        UpdateObstacleHits();
         UpdateUi();
     }
 
@@ -178,8 +218,20 @@ public class RaceManager2D : MonoBehaviour
             return;
         }
 
+        LoadUiFont();
         rankText = FindOrCreateText(canvas.transform, rankTextName, new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-18f, -18f), TextAlignmentOptions.TopRight);
         lapText = FindOrCreateText(canvas.transform, lapTextName, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(18f, -18f), TextAlignmentOptions.TopLeft);
+        countDownText = FindOrCreateText(canvas.transform, countDownTextName, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, 90f), TextAlignmentOptions.Center);
+        ApplyUiFont(rankText);
+        ApplyUiFont(lapText);
+        if (countDownText != null)
+        {
+            RectTransform rectTransform = countDownText.GetComponent<RectTransform>();
+            rectTransform.pivot = new Vector2(0.5f, 0.5f);
+            rectTransform.sizeDelta = new Vector2(480f, 140f);
+            countDownText.fontSize = 84;
+            countDownText.gameObject.SetActive(false);
+        }
     }
 
     private void CreateRunnerNameTag(PlayerSplineRunner runner, string displayName)
@@ -242,6 +294,46 @@ public class RaceManager2D : MonoBehaviour
         }
     }
 
+    private IEnumerator PlayCountdown()
+    {
+        if (countDownText == null)
+        {
+            SetAllRunnersRaceActive(true);
+            yield break;
+        }
+
+        countDownText.gameObject.SetActive(true);
+        string[] steps = { "3", "2", "1" };
+
+        foreach (string step in steps)
+        {
+            countDownText.text = step;
+            AudioManager.Instance?.PlaySFXOneShot(CountSoundName);
+            yield return new WaitForSeconds(countDownStepDuration);
+        }
+
+        countDownText.text = "GO!";
+        AudioManager.Instance?.PlaySFXOneShot(RaceSoundName);
+        SetAllRunnersRaceActive(true);
+        yield return new WaitForSeconds(goTextDuration);
+
+        countDownText.gameObject.SetActive(false);
+        countdownRoutine = null;
+    }
+
+    private void SetAllRunnersRaceActive(bool active)
+    {
+        foreach (PlayerSplineRunner runner in runners)
+        {
+            if (runner == null)
+            {
+                continue;
+            }
+
+            runner.SetRaceActive(active);
+        }
+    }
+
     private void UpdateHazardDrops()
     {
         foreach (PlayerSplineRunner runner in runners)
@@ -280,6 +372,11 @@ public class RaceManager2D : MonoBehaviour
                 if (Vector2.Distance(runner.transform.position, hazard.transform.position) <= hazard.TriggerRadius)
                 {
                     hazard.ApplyTo(runner);
+                    if (runner == humanRunner)
+                    {
+                        AudioManager.Instance?.PlaySFXOneShot(FailSoundName);
+                    }
+
                     Destroy(hazard.gameObject);
                     activeHazards.RemoveAt(hazardIndex);
                     consumed = true;
@@ -336,7 +433,121 @@ public class RaceManager2D : MonoBehaviour
                 }
 
                 victim.ApplyRearHitEffect(rearHitBoostAmount, rearHitBoostDuration, rearHitHeatMultiplier, rearHitHeatAmount);
+                TriggerRearHitCameraShake(attacker, victim);
             }
+        }
+    }
+
+    private void TriggerRearHitCameraShake(PlayerSplineRunner attacker, PlayerSplineRunner victim)
+    {
+        if (cameraFollow == null)
+        {
+            cameraFollow = Camera.main != null ? Camera.main.GetComponent<CameraFollow2D>() : null;
+        }
+
+        if (cameraFollow == null || humanRunner == null)
+        {
+            return;
+        }
+
+        if (attacker == humanRunner || victim == humanRunner)
+        {
+            AudioManager.Instance?.PlaySFXOneShot(FailSoundName);
+            cameraFollow.TriggerShake(rearHitCameraShakeMagnitude, rearHitCameraShakeDuration);
+        }
+    }
+
+    private void UpdateRunnerCollisions()
+    {
+        if (humanRunner == null || humanRunner.IsFinished)
+        {
+            return;
+        }
+
+        float sqrCollisionDistance = runnerCollisionDistance * runnerCollisionDistance;
+
+        foreach (PlayerSplineRunner runner in runners)
+        {
+            if (runner == null || runner == humanRunner || runner.IsFinished)
+            {
+                continue;
+            }
+
+            Vector2 delta = runner.transform.position - humanRunner.transform.position;
+            if (delta.sqrMagnitude > sqrCollisionDistance)
+            {
+                continue;
+            }
+
+            if (!humanRunner.CanReceiveRearHit || !runner.CanReceiveRearHit)
+            {
+                continue;
+            }
+
+            humanRunner.TriggerInstantOverheat();
+            runner.TriggerInstantOverheat();
+            AudioManager.Instance?.PlaySFXOneShot(FailSoundName);
+            TriggerCollisionCameraShake();
+        }
+    }
+
+    private void UpdateObstacleHits()
+    {
+        for (int obstacleIndex = activeObstacles.Count - 1; obstacleIndex >= 0; obstacleIndex--)
+        {
+            RaceObstacle2D obstacle = activeObstacles[obstacleIndex];
+            if (obstacle == null)
+            {
+                activeObstacles.RemoveAt(obstacleIndex);
+                continue;
+            }
+
+            if (obstacle.IsAnimating)
+            {
+                continue;
+            }
+
+            foreach (PlayerSplineRunner runner in runners)
+            {
+                if (runner == null || runner.IsFinished)
+                {
+                    continue;
+                }
+
+                float triggerDistance = obstacle.TriggerRadius + obstacleScale;
+                if (Vector2.Distance(runner.transform.position, obstacle.transform.position) > triggerDistance)
+                {
+                    continue;
+                }
+
+                runner.TriggerInstantOverheat();
+                obstacle.AnimateAwayAndDestroy(obstacleScreenExitDuration);
+                activeObstacles.RemoveAt(obstacleIndex);
+                if (runner == humanRunner)
+                {
+                    AudioManager.Instance?.PlaySFXOneShot(FailSoundName);
+                }
+
+                if (runner == humanRunner)
+                {
+                    TriggerCollisionCameraShake();
+                }
+
+                break;
+            }
+        }
+    }
+
+    private void TriggerCollisionCameraShake()
+    {
+        if (cameraFollow == null)
+        {
+            cameraFollow = Camera.main != null ? Camera.main.GetComponent<CameraFollow2D>() : null;
+        }
+
+        if (cameraFollow != null)
+        {
+            cameraFollow.TriggerShake(runnerCollisionCameraShakeMagnitude, runnerCollisionCameraShakeDuration);
         }
     }
 
@@ -368,6 +579,22 @@ public class RaceManager2D : MonoBehaviour
         return text;
     }
 
+    private void LoadUiFont()
+    {
+        if (uiFont == null)
+        {
+            uiFont = Resources.Load<TMP_FontAsset>(uiFontResourcesPath);
+        }
+    }
+
+    private void ApplyUiFont(TextMeshProUGUI text)
+    {
+        if (text != null && uiFont != null)
+        {
+            text.font = uiFont;
+        }
+    }
+
     private float GetCpuLaneOffset(int index, float usableLaneSpacing)
     {
         int laneIndex = index + 1;
@@ -392,6 +619,116 @@ public class RaceManager2D : MonoBehaviour
     private static Sprite GetSquareSprite()
     {
         return SquareSpriteCache.Sprite;
+    }
+
+    private void SpawnObstacles(RouteData route)
+    {
+        if (route == null || !route.IsValid() || obstacleCount <= 0)
+        {
+            return;
+        }
+
+        float halfTrackWidth = route.trackWidth * obstacleSpawnPaddingRatio * 0.5f;
+        int attempts = obstacleCount * 8;
+        List<Vector2> placedPositions = new List<Vector2>();
+
+        for (int i = 0; i < attempts && activeObstacles.Count < obstacleCount; i++)
+        {
+            float progress = Random.Range(0.08f, 0.92f);
+            Vector2 center = route.EvaluatePosition(progress);
+            Vector2 normal = route.EvaluateNormal(progress);
+            float lateral = Random.Range(-halfTrackWidth, halfTrackWidth);
+            Vector2 obstaclePosition = center + normal * lateral;
+
+            bool overlapsExisting = false;
+            foreach (Vector2 placedPosition in placedPositions)
+            {
+                if (Vector2.Distance(placedPosition, obstaclePosition) < obstacleSpacing)
+                {
+                    overlapsExisting = true;
+                    break;
+                }
+            }
+
+            if (overlapsExisting)
+            {
+                continue;
+            }
+
+            placedPositions.Add(obstaclePosition);
+            SpawnObstacle(obstaclePosition);
+        }
+    }
+
+    private void SpawnObstacle(Vector2 worldPosition)
+    {
+        GameObject obstaclePrefab = LoadRandomObstaclePrefab();
+        GameObject obstacleObject;
+
+        if (obstaclePrefab != null)
+        {
+            obstacleObject = Instantiate(obstaclePrefab, transform);
+            obstacleObject.name = obstaclePrefab.name;
+        }
+        else
+        {
+            obstacleObject = new GameObject("TrackObstacle");
+            obstacleObject.transform.SetParent(transform, false);
+
+            SpriteRenderer obstacleRenderer = obstacleObject.AddComponent<SpriteRenderer>();
+            obstacleRenderer.sprite = GetSquareSprite();
+            obstacleRenderer.color = new Color(0.92f, 0.92f, 0.92f, 1f);
+            obstacleRenderer.sortingOrder = 3;
+        }
+
+        obstacleObject.transform.position = new Vector3(worldPosition.x, worldPosition.y, 0f);
+        obstacleObject.transform.localScale = Vector3.one * obstacleScale;
+
+        EnsureObstacleSorting(obstacleObject);
+
+        RaceObstacle2D obstacle = obstacleObject.GetComponent<RaceObstacle2D>();
+        if (obstacle == null)
+        {
+            obstacle = obstacleObject.AddComponent<RaceObstacle2D>();
+        }
+
+        obstacle.Initialize(obstacleRadius);
+        activeObstacles.Add(obstacle);
+    }
+
+    private GameObject LoadRandomObstaclePrefab()
+    {
+        int rangeMin = Mathf.Min(obstaclePrefabMinIndex, obstaclePrefabMaxIndex);
+        int rangeMax = Mathf.Max(obstaclePrefabMinIndex, obstaclePrefabMaxIndex);
+        int randomIndex = Random.Range(rangeMin, rangeMax + 1);
+        return Resources.Load<GameObject>($"{obstaclePrefabResourcesPath}/{randomIndex}");
+    }
+
+    private static void EnsureObstacleSorting(GameObject obstacleObject)
+    {
+        SpriteRenderer[] renderers = obstacleObject.GetComponentsInChildren<SpriteRenderer>(true);
+        foreach (SpriteRenderer renderer in renderers)
+        {
+            if (renderer == null)
+            {
+                continue;
+            }
+
+            renderer.sortingOrder = Mathf.Max(renderer.sortingOrder, 3);
+        }
+    }
+
+    private void ClearObstacles()
+    {
+        for (int i = activeObstacles.Count - 1; i >= 0; i--)
+        {
+            if (activeObstacles[i] != null)
+            {
+                Destroy(activeObstacles[i].gameObject);
+            }
+        }
+
+        activeObstacles.Clear();
     }
 
     private void SpawnHazard(PlayerSplineRunner owner, Vector3 worldPosition)

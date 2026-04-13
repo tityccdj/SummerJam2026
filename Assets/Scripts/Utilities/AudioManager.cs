@@ -1,5 +1,6 @@
 using UnityEngine;
 using System.Collections.Generic;
+using System.Linq;
 
 [System.Serializable]
 public class Sound
@@ -13,6 +14,8 @@ public class Sound
 
 public class AudioManager : Singleton<AudioManager>
 {
+    private const string SoundsResourcesPath = "sounds";
+
     [Header("Audio Sources")]
     [SerializeField] private AudioSource musicSource;
     [SerializeField] private AudioSource sfxSource;
@@ -30,6 +33,10 @@ public class AudioManager : Singleton<AudioManager>
     
     private Dictionary<string, Sound> soundDictionary;
     private List<AudioSource> sfxSourcePool;
+    private readonly Dictionary<string, AudioSource> loopSources = new Dictionary<string, AudioSource>();
+    private readonly Dictionary<AudioSource, string> activeSourceSounds = new Dictionary<AudioSource, string>();
+    private string currentMusicSoundName;
+    private float currentMusicVolumeMultiplier = 1f;
     private const int POOL_SIZE = 10;
     
     protected override void Awake()
@@ -56,10 +63,28 @@ public class AudioManager : Singleton<AudioManager>
         soundDictionary = new Dictionary<string, Sound>();
         foreach (Sound sound in sounds)
         {
-            if (!soundDictionary.ContainsKey(sound.name))
+            if (!string.IsNullOrWhiteSpace(sound.name) && sound.clip != null && !soundDictionary.ContainsKey(sound.name))
             {
                 soundDictionary.Add(sound.name, sound);
             }
+        }
+
+        AudioClip[] loadedClips = Resources.LoadAll<AudioClip>(SoundsResourcesPath);
+        foreach (AudioClip clip in loadedClips)
+        {
+            if (clip == null || soundDictionary.ContainsKey(clip.name))
+            {
+                continue;
+            }
+
+            soundDictionary.Add(clip.name, new Sound
+            {
+                name = clip.name,
+                clip = clip,
+                volume = 1f,
+                pitch = 1f,
+                loop = false
+            });
         }
         
         // Initialize SFX pool
@@ -82,23 +107,31 @@ public class AudioManager : Singleton<AudioManager>
     /// </summary>
     public void PlayMusic(string soundName, bool fadeIn = false)
     {
+        PlayMusic(soundName, 1f, true, fadeIn);
+    }
+
+    public void PlayMusic(string soundName, float volumeMultiplier, bool loop = true, bool fadeIn = false)
+    {
         if (soundDictionary.TryGetValue(soundName, out Sound sound))
         {
+            currentMusicSoundName = soundName;
+            currentMusicVolumeMultiplier = Mathf.Clamp01(volumeMultiplier);
+
             if (fadeIn)
             {
                 musicSource.volume = 0;
                 musicSource.clip = sound.clip;
                 musicSource.pitch = sound.pitch;
-                musicSource.loop = sound.loop;
+                musicSource.loop = loop;
                 musicSource.Play();
-                FadeMusic(musicVolume * masterVolume * sound.volume, fadeDuration);
+                FadeMusic(musicVolume * masterVolume * sound.volume * currentMusicVolumeMultiplier, fadeDuration);
             }
             else
             {
                 musicSource.clip = sound.clip;
-                musicSource.volume = musicVolume * masterVolume * sound.volume;
+                musicSource.volume = musicVolume * masterVolume * sound.volume * currentMusicVolumeMultiplier;
                 musicSource.pitch = sound.pitch;
-                musicSource.loop = sound.loop;
+                musicSource.loop = loop;
                 musicSource.Play();
             }
         }
@@ -113,6 +146,8 @@ public class AudioManager : Singleton<AudioManager>
     /// </summary>
     public void StopMusic(bool fadeOut = false)
     {
+        currentMusicSoundName = null;
+        currentMusicVolumeMultiplier = 1f;
         if (fadeOut)
         {
             FadeMusic(0f, fadeDuration, () => musicSource.Stop());
@@ -162,10 +197,7 @@ public class AudioManager : Singleton<AudioManager>
         if (soundDictionary.TryGetValue(soundName, out Sound sound))
         {
             AudioSource source = GetAvailableSource();
-            source.clip = sound.clip;
-            source.volume = sfxVolume * masterVolume * sound.volume;
-            source.pitch = sound.pitch;
-            source.loop = sound.loop;
+            ConfigureSource(source, sound, soundName, sound.pitch);
             source.Play();
         }
         else
@@ -182,10 +214,7 @@ public class AudioManager : Singleton<AudioManager>
         if (soundDictionary.TryGetValue(soundName, out Sound sound))
         {
             AudioSource source = GetAvailableSource();
-            source.clip = sound.clip;
-            source.volume = sfxVolume * masterVolume * sound.volume;
-            source.pitch = sound.pitch + Random.Range(-pitchVariation, pitchVariation);
-            source.loop = sound.loop;
+            ConfigureSource(source, sound, soundName, sound.pitch + Random.Range(-pitchVariation, pitchVariation));
             source.Play();
         }
         else
@@ -208,6 +237,54 @@ public class AudioManager : Singleton<AudioManager>
             Debug.LogWarning($"Sound '{soundName}' not found!");
         }
     }
+
+    public void PlayLoop(string soundName, string channelKey)
+    {
+        if (string.IsNullOrWhiteSpace(channelKey))
+        {
+            channelKey = soundName;
+        }
+
+        if (!soundDictionary.TryGetValue(soundName, out Sound sound))
+        {
+            Debug.LogWarning($"Sound '{soundName}' not found!");
+            return;
+        }
+
+        if (!loopSources.TryGetValue(channelKey, out AudioSource source) || source == null)
+        {
+            GameObject loopObject = new GameObject($"Loop_{channelKey}");
+            loopObject.transform.SetParent(transform);
+            source = loopObject.AddComponent<AudioSource>();
+            loopSources[channelKey] = source;
+        }
+
+        if (source.isPlaying && source.clip == sound.clip)
+        {
+            UpdateLoopSourceVolume(source, soundName);
+            return;
+        }
+
+        ConfigureSource(source, sound, soundName, sound.pitch);
+        source.loop = true;
+        source.Play();
+    }
+
+    public void StopLoop(string channelKey)
+    {
+        if (string.IsNullOrWhiteSpace(channelKey))
+        {
+            return;
+        }
+
+        if (!loopSources.TryGetValue(channelKey, out AudioSource source) || source == null)
+        {
+            return;
+        }
+
+        source.Stop();
+        activeSourceSounds.Remove(source);
+    }
     
     /// <summary>
     /// Stop all sound effects
@@ -219,6 +296,13 @@ public class AudioManager : Singleton<AudioManager>
         {
             source.Stop();
         }
+
+        foreach (AudioSource source in loopSources.Values.Where(source => source != null))
+        {
+            source.Stop();
+        }
+
+        activeSourceSounds.Clear();
     }
     
     /// <summary>
@@ -274,11 +358,28 @@ public class AudioManager : Singleton<AudioManager>
     {
         if (musicSource != null)
         {
-            musicSource.volume = musicVolume * masterVolume;
+            if (!string.IsNullOrWhiteSpace(currentMusicSoundName) && soundDictionary.TryGetValue(currentMusicSoundName, out Sound musicSound))
+            {
+                musicSource.volume = musicVolume * masterVolume * musicSound.volume * currentMusicVolumeMultiplier;
+            }
+            else
+            {
+                musicSource.volume = musicVolume * masterVolume;
+            }
         }
         if (sfxSource != null)
         {
             sfxSource.volume = sfxVolume * masterVolume;
+        }
+
+        foreach (KeyValuePair<AudioSource, string> pair in activeSourceSounds)
+        {
+            if (pair.Key == null)
+            {
+                continue;
+            }
+
+            UpdateLoopSourceVolume(pair.Key, pair.Value);
         }
     }
     
@@ -312,6 +413,28 @@ public class AudioManager : Singleton<AudioManager>
     public void SetMute(bool mute)
     {
         AudioListener.volume = mute ? 0 : 1;
+    }
+
+    private void ConfigureSource(AudioSource source, Sound sound, string soundName, float pitch)
+    {
+        source.clip = sound.clip;
+        source.volume = sfxVolume * masterVolume * sound.volume;
+        source.pitch = pitch;
+        source.loop = sound.loop;
+        activeSourceSounds[source] = soundName;
+    }
+
+    private void UpdateLoopSourceVolume(AudioSource source, string soundName)
+    {
+        if (source == null || string.IsNullOrWhiteSpace(soundName))
+        {
+            return;
+        }
+
+        if (soundDictionary.TryGetValue(soundName, out Sound sound))
+        {
+            source.volume = sfxVolume * masterVolume * sound.volume;
+        }
     }
     
     #endregion

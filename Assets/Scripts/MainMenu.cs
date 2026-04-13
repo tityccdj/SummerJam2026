@@ -9,6 +9,8 @@ public class MainMenu : MonoBehaviour
 
     void Start()
     {
+        AudioManager.Instance.PlayMusic("title", 0.8f, true);
+
         uiMainMenu.Setup(new UIMainMenu.Param
         {
             onPlay = () => SceneLoader.Instance.LoadScene("Game"),

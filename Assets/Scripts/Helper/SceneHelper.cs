@@ -19,6 +19,8 @@ public class SceneHelper : MonoBehaviour
 
     private void Start()
     {
+        AudioManager.Instance?.PlayMusic("bgm", 0.8f, true);
+
         RoutesRenderer routesRenderer = null;
 
         if (createRouteRendererOnStart)
