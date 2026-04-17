@@ -10,6 +10,8 @@ public class Character : MonoBehaviour
     private Renderer renderer;
     [SerializeField]
     private Color[] clothColors;
+    [SerializeField]
+    private Animator animator;
 
     private int currentHairIndex = 0;
     public int CurrentHairIndex => currentHairIndex;
@@ -66,5 +68,23 @@ public class Character : MonoBehaviour
         int randomClothIndex = Random.Range(0, ClothCount);
         SetHair(randomHairIndex);
         SetCloth(randomClothIndex);
+    }
+
+    public void PlayAnimation(string stateName)
+    {
+        if (animator == null || animator.runtimeAnimatorController == null)
+        {
+            return;
+        }
+
+        animator.Play(stateName, 0, 0f);
+    }
+
+    public void SetFlipX(bool flip)
+    {
+        // should flip by scale
+        Vector3 localScale = transform.localScale;
+        localScale.x = Mathf.Abs(localScale.x) * (flip ? -1 : 1);
+        transform.localScale = localScale;
     }
 }

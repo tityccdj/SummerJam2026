@@ -173,7 +173,7 @@ public class RaceManager2D : MonoBehaviour
 
     private PlayerSplineRunner CreateCpuRunner(int prefabIndex, RoutesRenderer routesRenderer, float usableLaneSpacing)
     {
-        GameObject cpuPrefab = LoadCharacterPrefab(prefabIndex);
+        GameObject cpuPrefab = LoadPlayerPrefab();
         GameObject cpuObject;
 
         if (cpuPrefab != null)
@@ -190,13 +190,19 @@ public class RaceManager2D : MonoBehaviour
             cpuSprite.sprite = GetSquareSprite();
             cpuSprite.color = GetCpuColor(prefabIndex - 1);
             cpuSprite.sortingOrder = 5 + prefabIndex;
-            cpuObject.transform.localScale = new Vector3(0.48f, 0.48f, 1f);
+            cpuObject.transform.localScale = new Vector3(0.48f, 0.48f, 1f);        
         }
 
         PlayerSplineRunner cpuRunner = cpuObject.GetComponent<PlayerSplineRunner>();
         if (cpuRunner == null)
         {
             cpuRunner = cpuObject.AddComponent<PlayerSplineRunner>();
+        }
+
+        Character character = cpuObject.GetComponentInChildren<Character>();
+        if (character != null)
+        {
+            character.RandomizeAppearance();
         }
 
         float startProgress = Mathf.Repeat(1f - (prefabIndex * startProgressSpacing), 1f);

@@ -9,17 +9,15 @@ public class PlayerSplineRunner : MonoBehaviour
     private const string RoundSoundName = "round";
     private const string WinSoundName = "win";
     private const string HumanGaspChannel = "player_gasp";
-    private const string DefaultAnimationControllerPath = "animations/racer";
-    private const string IdleAnimationStateName = "idle";
-    private const string RunAnimationStateName = "run";
-    private const string OverheatAnimationStateName = "overheat";
+    public const string IdleAnimationStateName = "idle";
+    public const string RunAnimationStateName = "run";
+    public const string OverheatAnimationStateName = "overheat";
 
     [Header("Scene References")]
     [SerializeField] private RoutesRenderer routesRenderer;
     [SerializeField] private Joystick joystick;
     [SerializeField] private Slider overheatSlider;
-    [SerializeField] private SpriteRenderer spriteRenderer;
-    [SerializeField] private Animator animator;
+    [SerializeField] private Character character;
 
     [Header("Runner")]
     [SerializeField] private string runnerName = "Runner";
@@ -27,7 +25,6 @@ public class PlayerSplineRunner : MonoBehaviour
     [SerializeField] private int targetLapCount = 3;
     [SerializeField] private bool screenSpaceLateralControls = true;
     [SerializeField] private bool useAnimationSet = true;
-    [SerializeField] private string animationControllerResourcesPath = DefaultAnimationControllerPath;
     [SerializeField] private float runAnimationSpeedThreshold = 0.02f;
     [SerializeField] private float collisionAnimationDuration = 0.45f;
     [SerializeField] private float tangentFlipThreshold = 0.001f;
@@ -89,7 +86,6 @@ public class PlayerSplineRunner : MonoBehaviour
     private float lastHorizontalSign = 1f;
     private float lastProgressSample;
     private bool hasProgressSample;
-    private Color defaultColor = Color.white;
     private Vector2 currentRouteTangent = Vector2.right;
 
     private float aiPumpTimer;
@@ -333,22 +329,10 @@ public class PlayerSplineRunner : MonoBehaviour
 
     private void CacheComponents()
     {
-        if (spriteRenderer == null)
+        if (character == null)
         {
-            spriteRenderer = GetComponent<SpriteRenderer>();
-        }
-
-        if (animator == null)
-        {
-            animator = GetComponent<Animator>();
-        }
-
-        EnsureAnimatorReady();
-
-        if (spriteRenderer != null)
-        {
-            defaultSpriteFlipX = spriteRenderer.flipX;
-            defaultColor = spriteRenderer.color;
+            character = GetComponentInChildren<Character>();
+            character.SetFlipX(defaultSpriteFlipX);
         }
     }
 
@@ -663,26 +647,6 @@ public class PlayerSplineRunner : MonoBehaviour
     {
         UpdateAnimationState();
         UpdateSpriteFacing();
-
-        if (spriteRenderer == null)
-        {
-            return;
-        }
-
-        if (isOverHeated)
-        {
-            float lerp = Mathf.PingPong(Time.time * flashSpeed, 1f);
-            spriteRenderer.color = Color.Lerp(defaultColor, overHeatColor, lerp);
-        }
-        else if (isFinished && !isHuman)
-        {
-            spriteRenderer.color = Color.Lerp(defaultColor, Color.white, 0.45f);
-        }
-        else
-        {
-            float heatRatio = maxOverHeat > 0f ? currentOverHeat / maxOverHeat : 0f;
-            spriteRenderer.color = Color.Lerp(defaultColor, overHeatColor, heatRatio * 0.35f);
-        }
     }
 
     private void SyncSlider()
@@ -755,30 +719,6 @@ public class PlayerSplineRunner : MonoBehaviour
         AudioManager.Instance.StopLoop(HumanGaspChannel);
     }
 
-    private void EnsureAnimatorReady()
-    {
-        if (!useAnimationSet)
-        {
-            return;
-        }
-
-        if (animator == null)
-        {
-            animator = gameObject.AddComponent<Animator>();
-        }
-
-        if (animator.runtimeAnimatorController != null)
-        {
-            return;
-        }
-
-        RuntimeAnimatorController controller = Resources.Load<RuntimeAnimatorController>(animationControllerResourcesPath);
-        if (controller != null)
-        {
-            animator.runtimeAnimatorController = controller;
-        }
-    }
-
     private void TriggerCollisionAnimation(float durationOverride = -1f)
     {
         float duration = durationOverride > 0f ? durationOverride : collisionAnimationDuration;
@@ -792,11 +732,6 @@ public class PlayerSplineRunner : MonoBehaviour
             return;
         }
 
-        EnsureAnimatorReady();
-        if (animator == null || animator.runtimeAnimatorController == null)
-        {
-            return;
-        }
 
         string targetState = IdleAnimationStateName;
         if (collisionAnimationTimer > 0f || isOverHeated)
@@ -813,24 +748,24 @@ public class PlayerSplineRunner : MonoBehaviour
             return;
         }
 
-        animator.Play(targetState, 0, 0f);
+        if (character != null) character.PlayAnimation(targetState);
         currentAnimationState = targetState;
     }
 
     private void UpdateSpriteFacing()
     {
-        if (spriteRenderer == null)
+        if (character == null)
         {
             return;
         }
 
         if (currentFacingTangentX >= tangentFlipThreshold)
         {
-            spriteRenderer.flipX = defaultSpriteFlipX;
+            character.SetFlipX(defaultSpriteFlipX);
         }
         else if (currentFacingTangentX <= -tangentFlipThreshold)
         {
-            spriteRenderer.flipX = !defaultSpriteFlipX;
+            character.SetFlipX(!defaultSpriteFlipX);
         }
     }
 }
