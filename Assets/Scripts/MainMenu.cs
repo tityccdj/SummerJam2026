@@ -13,7 +13,7 @@ public class MainMenu : MonoBehaviour
 
         uiMainMenu.Setup(new UIMainMenu.Param
         {
-            onPlay = () => SceneLoader.Instance.LoadScene("Game"),
+            onPlay = () => SceneLoader.Instance.LoadScene("Character"),
             onSetting = () =>
             {
                 uiMainMenu.gameObject.SetActive(false);
