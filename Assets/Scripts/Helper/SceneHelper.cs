@@ -12,6 +12,7 @@ public class SceneHelper : MonoBehaviour
 
     [Header("Gameplay Bootstrap")]
     [SerializeField] private bool bootstrapPlayerSystems = true;
+    [SerializeField] private bool bootstrapRouteProps = true;
     [SerializeField] private string playerTag = "Player";
     [SerializeField] private string overHeatSliderName = "Slider (OverHeat)";
     [SerializeField] private int totalLapCount = 3;
@@ -30,6 +31,11 @@ public class SceneHelper : MonoBehaviour
 
         if (!bootstrapPlayerSystems)
         {
+            if (bootstrapRouteProps)
+            {
+                SetupRouteProps(routesRenderer != null ? routesRenderer : FindFirstObjectByType<RoutesRenderer>(), null);
+            }
+
             return;
         }
 
@@ -106,6 +112,11 @@ public class SceneHelper : MonoBehaviour
         {
             BindCamera(cameraTarget);
         }
+
+        if (bootstrapRouteProps)
+        {
+            SetupRouteProps(routesRenderer, activeHumanRunner != null ? activeHumanRunner.transform : cameraTarget);
+        }
     }
 
     private void BindButtons(PlayerSplineRunner playerRunner)
@@ -170,6 +181,23 @@ public class SceneHelper : MonoBehaviour
         }
 
         cameraFollow.SetTarget(playerTransform);
+    }
+
+    private void SetupRouteProps(RoutesRenderer routesRenderer, Transform playerTarget)
+    {
+        if (routesRenderer == null)
+        {
+            return;
+        }
+
+        RoutePropManager2D propManager = FindFirstObjectByType<RoutePropManager2D>();
+        if (propManager == null)
+        {
+            GameObject propObject = new GameObject("RoutePropManager2D");
+            propManager = propObject.AddComponent<RoutePropManager2D>();
+        }
+
+        propManager.Initialize(routesRenderer, playerTarget, Camera.main);
     }
 
     private Slider FindOrCreateOverHeatSlider()
