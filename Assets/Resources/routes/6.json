@@ -2,7 +2,7 @@
     "routeId":  6,
     "displayName":  "Sprint Box",
     "closed":  true,
-    "trackWidth":  1.9,
+    "trackWidth":  3.9,
     "subdivisionsPerSegment":  14,
     "points":  [
                    {

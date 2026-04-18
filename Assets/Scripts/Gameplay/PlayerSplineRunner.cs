@@ -32,18 +32,18 @@ public class PlayerSplineRunner : MonoBehaviour
     [Header("Movement")]
     [SerializeField] private float pumpImpulse = 0.1f;
     [SerializeField] private float joystickAcceleration = 0.08f;
-    [SerializeField] private float maxForwardSpeed = 0.35f;
-    [SerializeField] private float speedDamping = 0.24f;
+    [SerializeField] private float maxForwardSpeed = 0.15f;
+    [SerializeField] private float speedDamping = 0.05f;
     [SerializeField] private float lateralMoveSpeed = 2.4f;
     [SerializeField] private float lateralReturnSpeed = 1.4f;
     [SerializeField] private float lateralTrackPadding = 0.75f;
 
     [Header("OverHeat")]
-    [SerializeField] private float maxOverHeat = 100f;
+    [SerializeField] private float maxOverHeat = 150f;
     [SerializeField] private float runHeatGain = 12f;
-    [SerializeField] private float passiveCoolRate = 6f;
-    [SerializeField] private float coolDownTapAmount = 9f;
-    [SerializeField] private float overHeatRecoverThreshold = 35f;
+    [SerializeField] private float passiveCoolRate = 10f;
+    [SerializeField] private float coolDownTapAmount = 30f;
+    [SerializeField] private float overHeatRecoverThreshold = 55f;
     [SerializeField] private float globalSpeedMultiplier = 0.9f;
     [SerializeField] private float overHeatTopSpeedMultiplier = 0.42f;
     [SerializeField] private float overHeatAccelerationMultiplier = 0.12f;

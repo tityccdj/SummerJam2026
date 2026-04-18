@@ -34,12 +34,12 @@ public class RaceManager2D : MonoBehaviour
     [SerializeField] private float runnerCollisionDistance = 0.55f;
     [SerializeField] private float runnerCollisionCameraShakeMagnitude = 0.18f;
     [SerializeField] private float runnerCollisionCameraShakeDuration = 0.28f;
-    [SerializeField] private int obstacleCount = 18;
+    [SerializeField] private int obstacleCount = 7;
     [SerializeField] private string obstaclePrefabResourcesPath = "prefabs/obstacles";
     [SerializeField] private int obstaclePrefabMinIndex = 0;
-    [SerializeField] private int obstaclePrefabMaxIndex = 10;
-    [SerializeField] private float obstacleScale = 0.85f;
-    [SerializeField] private float obstacleRadius = 0.42f;
+    [SerializeField] private int obstaclePrefabMaxIndex = 8;
+    [SerializeField] private float obstacleScale = 0.3f;
+    [SerializeField] private float obstacleRadius = 0.2f;
     [SerializeField] private float obstacleSpawnPaddingRatio = 0.72f;
     [SerializeField] private float obstacleSpacing = 0.95f;
     [SerializeField] private float obstacleScreenExitDuration = 0.65f;
@@ -131,7 +131,7 @@ public class RaceManager2D : MonoBehaviour
 
         UpdateHazardDrops();
         UpdateHazardHits();
-        UpdateRearHits();
+        //UpdateRearHits();
         UpdateRunnerCollisions();
         UpdateObstacleHits();
         UpdateUi();
@@ -205,7 +205,7 @@ public class RaceManager2D : MonoBehaviour
             character.RandomizeAppearance();
         }
 
-        float startProgress = Mathf.Repeat(1f - (prefabIndex * startProgressSpacing), 1f);
+        float startProgress = Mathf.Repeat(1f - (prefabIndex * startProgressSpacing), 0.0001f);
         float lateralOffset = GetCpuLaneOffset(prefabIndex - 1, usableLaneSpacing);
 
         cpuRunner.ConfigureRunner($"CPU {prefabIndex}", false, routesRenderer, null, null, lapCount);
@@ -310,7 +310,8 @@ public class RaceManager2D : MonoBehaviour
         }
 
         countDownText.gameObject.SetActive(true);
-        string[] steps = { "3", "2", "1" };
+        //string[] steps = { "3", "2", "1" };
+        string[] steps = {  "1" };
 
         foreach (string step in steps)
         {
@@ -439,8 +440,8 @@ public class RaceManager2D : MonoBehaviour
                     continue;
                 }
 
-                victim.ApplyRearHitEffect(rearHitBoostAmount, rearHitBoostDuration, rearHitHeatMultiplier, rearHitHeatAmount);
-                TriggerRearHitCameraShake(attacker, victim);
+                //victim.ApplyRearHitEffect(rearHitBoostAmount, rearHitBoostDuration, rearHitHeatMultiplier, rearHitHeatAmount);
+                //TriggerRearHitCameraShake(attacker, victim);
             }
         }
     }
@@ -491,10 +492,10 @@ public class RaceManager2D : MonoBehaviour
                 continue;
             }
 
-            humanRunner.TriggerInstantOverheat();
-            runner.TriggerInstantOverheat();
-            AudioManager.Instance?.PlaySFXOneShot(FailSoundName);
-            TriggerCollisionCameraShake();
+            //humanRunner.TriggerInstantOverheat();
+            //runner.TriggerInstantOverheat();
+            //AudioManager.Instance?.PlaySFXOneShot(FailSoundName);
+            //TriggerCollisionCameraShake();
         }
     }
 
