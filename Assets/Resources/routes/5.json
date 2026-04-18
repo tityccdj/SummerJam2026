@@ -2,7 +2,7 @@
     "routeId":  5,
     "displayName":  "Grand Arc",
     "closed":  true,
-    "trackWidth":  3.8,
+    "trackWidth":  4.3,
     "subdivisionsPerSegment":  14,
     "points":  [
                    {

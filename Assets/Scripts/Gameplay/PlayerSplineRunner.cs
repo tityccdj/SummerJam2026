@@ -59,6 +59,8 @@ public class PlayerSplineRunner : MonoBehaviour
     [SerializeField] private KeyCode dropHazardKey = KeyCode.I;
     [SerializeField] private KeyCode leftKey = KeyCode.A;
     [SerializeField] private KeyCode rightKey = KeyCode.D;
+    [SerializeField] private KeyCode upKey = KeyCode.W;
+    [SerializeField] private KeyCode downKey = KeyCode.S;
     [SerializeField] private KeyCode altLeftKey = KeyCode.LeftArrow;
     [SerializeField] private KeyCode altRightKey = KeyCode.RightArrow;
 
@@ -111,6 +113,9 @@ public class PlayerSplineRunner : MonoBehaviour
     private string currentAnimationState;
     private float currentFacingTangentX;
     private bool defaultSpriteFlipX;
+
+    private float speedBoostEndTime;
+    private float speedBoostMultiplier = 1f;
 
     public string RunnerName => runnerName;
     public bool IsHuman => isHuman;
@@ -278,6 +283,20 @@ public class PlayerSplineRunner : MonoBehaviour
         rearHitImmunityTimer = Mathf.Max(rearHitImmunityTimer, duration * 0.5f);
     }
 
+    public void ResetHeat()
+    {
+        currentOverHeat = 0f;
+        isOverHeated = false;
+        RefreshHumanOverheatAudio();
+        SyncSlider();
+    }
+
+    public void ApplySpeedBoost(float speedMultiplier, float duration)
+    {
+        speedBoostEndTime = Time.time + duration;
+        speedBoostMultiplier = speedMultiplier;
+    }
+
     private void Awake()
     {
         CacheComponents();
@@ -393,7 +412,7 @@ public class PlayerSplineRunner : MonoBehaviour
         float forwardInput = isHuman ? GetHumanForwardInput() : GetCpuForwardInput();
         float horizontalInput = isHuman ? GetHumanHorizontalInput() : GetCpuHorizontalInput();
         float accelerationScale = isOverHeated ? overHeatAccelerationMultiplier : 1f;
-        float targetTopSpeed = maxForwardSpeed * globalSpeedMultiplier * (isOverHeated ? overHeatTopSpeedMultiplier : 1f);
+        float targetTopSpeed = maxForwardSpeed * globalSpeedMultiplier * (isOverHeated ? overHeatTopSpeedMultiplier : 1f) * speedBoostMultiplier;
         float reverseSpeedLimit = maxForwardSpeed * globalSpeedMultiplier * 0.2f;
         float sprintCap = targetTopSpeed * 1.45f;
 

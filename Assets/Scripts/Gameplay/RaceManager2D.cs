@@ -44,6 +44,7 @@ public class RaceManager2D : MonoBehaviour
     [SerializeField] private float obstacleSpacing = 0.95f;
     [SerializeField] private float obstacleScreenExitDuration = 0.65f;
 
+
     [Header("UI")]
     [SerializeField] private string rankTextName = "Text (Rank)";
     [SerializeField] private string lapTextName = "Text (Lap)";
@@ -112,6 +113,7 @@ public class RaceManager2D : MonoBehaviour
         }
 
         SpawnObstacles(route);
+
         SetAllRunnersRaceActive(false);
         if (countdownRoutine != null)
         {
@@ -134,6 +136,7 @@ public class RaceManager2D : MonoBehaviour
         //UpdateRearHits();
         UpdateRunnerCollisions();
         UpdateObstacleHits();
+
         UpdateUi();
     }
 
@@ -353,7 +356,7 @@ public class RaceManager2D : MonoBehaviour
 
             if (runner.TryConsumeHazardDrop(out Vector3 worldPosition))
             {
-                SpawnHazard(runner, worldPosition);
+                //SpawnHazard(runner, worldPosition);
             }
         }
     }
@@ -793,6 +796,8 @@ public class RaceManager2D : MonoBehaviour
 
         return LoadCharacterPrefab(0);
     }
+
+    
 
     private static class SquareSpriteCache
     {

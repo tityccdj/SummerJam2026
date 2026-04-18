@@ -1,8 +1,9 @@
+
 {
     "routeId":  2,
     "displayName":  "Twin Bend",
     "closed":  true,
-    "trackWidth":  3.3,
+    "trackWidth":  4.3,
     "subdivisionsPerSegment":  16,
     "points":  [
                    {

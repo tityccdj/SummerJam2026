@@ -1,8 +1,9 @@
+
 {
     "routeId":  3,
     "displayName":  "Clover Dash",
     "closed":  true,
-    "trackWidth":  3.2,
+    "trackWidth":  4.2,
     "subdivisionsPerSegment":  18,
     "points":  [
                    {

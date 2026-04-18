@@ -1,8 +1,8 @@
 {
-    "routeId":  4,
+"routeId":  4,
     "displayName":  "Needle Loop",
     "closed":  true,
-    "trackWidth":  2.0,
+    "trackWidth":  4.0,
     "subdivisionsPerSegment":  18,
     "points":  [
                    {
