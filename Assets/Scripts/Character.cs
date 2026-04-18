@@ -49,13 +49,13 @@ public class Character : MonoBehaviour
 
     public void LoadCharacterData()
     {
-        if (PlayerPrefs.HasKey(HairIndexKey))
+        if (PlayerPrefs.HasKey(HairIndexKey) && hairSprites.Length > 0)
         {
             currentHairIndex = PlayerPrefs.GetInt(HairIndexKey);
             hairRenderer.sprite = hairSprites[currentHairIndex];
         }
 
-        if (PlayerPrefs.HasKey(ClothIndexKey))
+        if (PlayerPrefs.HasKey(ClothIndexKey) && clothColors.Length > 0)
         {
             currentClothIndex = PlayerPrefs.GetInt(ClothIndexKey);
             renderer.material.SetColor("_TargetColor", clothColors[currentClothIndex]);

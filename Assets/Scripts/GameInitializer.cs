@@ -14,5 +14,6 @@ public class GameInitializer : MonoBehaviour
         Instantiate(audioManager);
         Instantiate(effectManager);
         Instantiate(sceneLoader);
+        Utility.Setup(this);
     }
 }

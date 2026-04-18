@@ -20,12 +20,17 @@ public class CharacterCustomization : MonoBehaviour
         });
 
         character.LoadCharacterData();
+        character.PlayAnimation("idle");
     }
 
     private void OnPlay()
     {
         character.SaveCharacterData();
-        SceneLoader.Instance.LoadScene("Game");
+        character.PlayAnimation("run");
+        Utility.WaitForSeconds(0.5f, () =>
+        {
+            SceneLoader.Instance.LoadScene("Game");
+        });
     }
 
     private void OnBack()
