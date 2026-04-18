@@ -32,7 +32,7 @@ public class PlayerSplineRunner : MonoBehaviour
     [Header("Movement")]
     [SerializeField] private float pumpImpulse = 0.1f;
     [SerializeField] private float joystickAcceleration = 0.08f;
-    [SerializeField] private float maxForwardSpeed = 0.15f;
+    [SerializeField] private float maxForwardSpeed = 0.07f;
     [SerializeField] private float speedDamping = 0.05f;
     [SerializeField] private float lateralMoveSpeed = 2.4f;
     [SerializeField] private float lateralReturnSpeed = 1.4f;

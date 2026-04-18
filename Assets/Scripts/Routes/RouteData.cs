@@ -21,6 +21,7 @@ public class RouteData
     public string displayName = "Route";
     public bool closed = true;
     public float trackWidth = 2.5f;
+    public float trackScale = 3.0f;
     public int subdivisionsPerSegment = 10;
     public RoutePointData[] points = Array.Empty<RoutePointData>();
 
@@ -129,16 +130,32 @@ public class RouteData
 
     private Vector2 GetPoint(int index, bool loop)
     {
+        //int count = points.Length;
+
+        //if (loop)
+        //{
+        //    int wrappedIndex = (index % count + count) % count;
+        //    return points[wrappedIndex].ToVector2();
+        //}
+
+        //int clampedIndex = Mathf.Clamp(index, 0, count - 1);
+        //return points[clampedIndex].ToVector2();
         int count = points.Length;
+        Vector2 rawPoint;
 
         if (loop)
         {
             int wrappedIndex = (index % count + count) % count;
-            return points[wrappedIndex].ToVector2();
+            rawPoint = points[wrappedIndex].ToVector2();
+        }
+        else
+        {
+            int clampedIndex = Mathf.Clamp(index, 0, count - 1);
+            rawPoint = points[clampedIndex].ToVector2();
         }
 
-        int clampedIndex = Mathf.Clamp(index, 0, count - 1);
-        return points[clampedIndex].ToVector2();
+        // --- คูณด้วย trackScale ก่อนส่งออกไปใช้งาน ---
+        return rawPoint * trackScale;
     }
 
     private static Vector2 EvaluateCatmullRom(Vector2 p0, Vector2 p1, Vector2 p2, Vector2 p3, float t)

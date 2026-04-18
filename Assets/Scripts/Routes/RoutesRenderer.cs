@@ -45,6 +45,7 @@ public class RoutesRenderer : MonoBehaviour
     [ContextMenu("Refresh Route")]
     public void Refresh()
     {
+
         RouteData route = RouteDatabase.Instance.GetRoute(routeId);
         if (route == null)
         {
