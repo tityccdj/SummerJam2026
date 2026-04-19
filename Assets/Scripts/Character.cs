@@ -19,7 +19,10 @@ public class Character : MonoBehaviour
     public int CurrentClothIndex => currentClothIndex;
     public int HairCount => hairSprites.Length;
     public int ClothCount => clothColors.Length;
+    private Color hairColor = Color.white;
+    public Color HairColor => hairColor;
     private const string HairIndexKey = "HairIndex";
+    private const string HairColorKey = "HairColor"; 
     private const string ClothIndexKey = "ClothIndex";
 
     public void SetHair(int index)
@@ -40,10 +43,17 @@ public class Character : MonoBehaviour
         }
     }
 
+    public void SetHairColor(Color color)
+    {
+        hairColor = color;
+        hairRenderer.color = hairColor;
+    }
+
     public void SaveCharacterData()
     {
         PlayerPrefs.SetInt(HairIndexKey, currentHairIndex);
         PlayerPrefs.SetInt(ClothIndexKey, currentClothIndex);
+        PlayerPrefs.SetString(HairColorKey, $"#{ColorUtility.ToHtmlStringRGBA(hairColor)}");
         PlayerPrefs.Save();
     }
 
@@ -60,14 +70,25 @@ public class Character : MonoBehaviour
             currentClothIndex = PlayerPrefs.GetInt(ClothIndexKey);
             renderer.material.SetColor("_TargetColor", clothColors[currentClothIndex]);
         }
+
+        if (PlayerPrefs.HasKey(HairColorKey))
+        {
+            string colorString = PlayerPrefs.GetString(HairColorKey);
+            if (ColorUtility.TryParseHtmlString(colorString, out Color savedColor))
+            {
+                SetHairColor(savedColor);
+            }
+        }
     }
 
     public void RandomizeAppearance()
     {
         int randomHairIndex = Random.Range(0, HairCount);
         int randomClothIndex = Random.Range(0, ClothCount);
+        Color randomHairColor = Random.ColorHSV();
         SetHair(randomHairIndex);
         SetCloth(randomClothIndex);
+        SetHairColor(randomHairColor);
     }
 
     public void PlayAnimation(string stateName)

@@ -9,6 +9,8 @@ public class CharacterCustomization : MonoBehaviour
 
     private void Start()
     {
+        character.LoadCharacterData();
+        character.PlayAnimation("idle");
         uiCharacter.Setup(new UICharacter.Param
         {
             onPlay = OnPlay,
@@ -16,11 +18,10 @@ public class CharacterCustomization : MonoBehaviour
             onNextHair = OnNextHair,
             onPrevHair = OnPrevHair,
             onNextCloth = OnNextCloth,
-            onPrevCloth = OnPrevCloth
+            onPrevCloth = OnPrevCloth,
+            onHairColorChange = OnHairColorChange,
+            initialHairColor = character.HairColor
         });
-
-        character.LoadCharacterData();
-        character.PlayAnimation("idle");
     }
 
     private void OnPlay()
@@ -60,5 +61,10 @@ public class CharacterCustomization : MonoBehaviour
     {
         int newIndex = (character.CurrentClothIndex + 1) % character.ClothCount;
         character.SetCloth(newIndex);
+    }
+
+    private void OnHairColorChange(Color color)
+    {
+        character.SetHairColor(color);
     }
 }

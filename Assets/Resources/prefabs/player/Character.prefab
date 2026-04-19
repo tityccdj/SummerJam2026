@@ -125,7 +125,10 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Character
   hairRenderer: {fileID: 1621501998869140888}
-  hairSprites: []
+  hairSprites:
+  - {fileID: 21300000, guid: 3bc278e3c0cea4824933ee7c00440c36, type: 3}
+  - {fileID: 21300000, guid: fabad5d8255f645c7bb914620954511d, type: 3}
+  - {fileID: 21300000, guid: 278ef47f0093b4e039ab8666fa94c5bf, type: 3}
   renderer: {fileID: 7589433847950058539}
   clothColors:
   - {r: 1, g: 0.27735847, b: 0.27735847, a: 1}
@@ -159,8 +162,8 @@ Transform:
   m_GameObject: {fileID: 2487595417507125619}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0.082, y: 0.82, z: 0}
-  m_LocalScale: {x: 1, y: 0.2956, z: 1}
+  m_LocalPosition: {x: -0.03, y: 0.48, z: 0}
+  m_LocalScale: {x: 0.2903, y: 0.2903, z: 0.2903}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 7617699306883205058}
@@ -208,8 +211,8 @@ SpriteRenderer:
   m_LightmapParameters: {fileID: 0}
   m_SortingLayerID: 0
   m_SortingLayer: 0
-  m_SortingOrder: 0
-  m_Sprite: {fileID: 7482667652216324306, guid: 311925a002f4447b3a28927169b83ea6, type: 3}
+  m_SortingOrder: 21
+  m_Sprite: {fileID: 21300000, guid: 278ef47f0093b4e039ab8666fa94c5bf, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
   m_FlipY: 0
