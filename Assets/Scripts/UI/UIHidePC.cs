@@ -6,7 +6,7 @@ public class UIHidePC : MonoBehaviour
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
     {
-        bool showMobileUI = Input.touchSupported;
+        bool showMobileUI = Utility.IsMobile();
         gameObject.SetActive(showMobileUI);
     }
 

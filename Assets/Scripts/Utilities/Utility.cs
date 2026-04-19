@@ -1,7 +1,12 @@
+using System.Runtime.InteropServices;
 using UnityEngine;
 
 public static class Utility
 {
+#if UNITY_WEBGL && !UNITY_EDITOR
+    [DllImport("__Internal")]
+    private static extern bool IsMobileDevice();
+#endif
     private static MonoBehaviour monoBehaviour;
 
     public static void Setup(MonoBehaviour monoBehaviour)
@@ -22,6 +27,15 @@ public static class Utility
     {
 #if UNITY_WEBGL
         return true;
+#else
+        return false;
+#endif
+    }
+
+    public static bool IsMobile()
+    {
+#if UNITY_WEBGL && !UNITY_EDITOR
+        return IsMobileDevice();
 #else
         return false;
 #endif
