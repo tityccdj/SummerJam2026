@@ -227,6 +227,12 @@ public class RaceManager2D : MonoBehaviour
             Debug.LogWarning("[RaceManager2D] Player prefab was not found in Resources and there is no fallback player in the scene.");
         }
 
+        Character character = resolvedRunner.GetComponentInChildren<Character>();
+        if (character != null)
+        {
+            character.LoadCharacterData();
+        }
+
         return resolvedRunner;
     }
 

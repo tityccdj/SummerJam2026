@@ -10,6 +10,8 @@ public class UICharacter : MonoBehaviour
         public Action onBack;
         public Action onNextHair;
         public Action onPrevHair;
+        public Action onNextFace;
+        public Action onPrevFace;
         public Action onNextCloth;
         public Action onPrevCloth;
         public Action<Color> onHairColorChange;
@@ -25,6 +27,10 @@ public class UICharacter : MonoBehaviour
     [SerializeField]
     private Button prevHairBtn;
     [SerializeField]
+    private Button nextFaceBtn;
+    [SerializeField]
+    private Button prevFaceBtn;
+    [SerializeField]
     private Button nextClothBtn;
     [SerializeField]
     private Button prevClothBtn;
@@ -39,6 +45,8 @@ public class UICharacter : MonoBehaviour
         backBtn.onClick.AddListener(() => param.onBack?.Invoke());
         nextHairBtn.onClick.AddListener(() => param.onNextHair?.Invoke());
         prevHairBtn.onClick.AddListener(() => param.onPrevHair?.Invoke());
+        nextFaceBtn.onClick.AddListener(() => param.onNextFace?.Invoke());
+        prevFaceBtn.onClick.AddListener(() => param.onPrevFace?.Invoke());
         nextClothBtn.onClick.AddListener(() => param.onNextCloth?.Invoke());
         prevClothBtn.onClick.AddListener(() => param.onPrevCloth?.Invoke());
         hairColor.onColorChange.AddListener(color => param.onHairColorChange?.Invoke(color));

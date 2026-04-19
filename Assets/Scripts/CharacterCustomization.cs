@@ -17,6 +17,8 @@ public class CharacterCustomization : MonoBehaviour
             onBack = OnBack,
             onNextHair = OnNextHair,
             onPrevHair = OnPrevHair,
+            onNextFace = OnNextFace,
+            onPrevFace = OnPrevFace,
             onNextCloth = OnNextCloth,
             onPrevCloth = OnPrevCloth,
             onHairColorChange = OnHairColorChange,
@@ -49,6 +51,18 @@ public class CharacterCustomization : MonoBehaviour
     {
         int newIndex = (character.CurrentHairIndex + 1) % character.HairCount;
         character.SetHair(newIndex);
+    }
+
+    private void OnNextFace()
+    {
+        int newIndex = (character.CurrentFaceIndex + 1) % character.FaceCount;
+        character.SetFace(newIndex);
+    }
+
+    private void OnPrevFace()
+    {
+        int newIndex = (character.CurrentFaceIndex - 1 + character.FaceCount) % character.FaceCount;
+        character.SetFace(newIndex);
     }
 
     private void OnPrevCloth()
