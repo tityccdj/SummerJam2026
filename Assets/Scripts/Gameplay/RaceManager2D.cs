@@ -85,7 +85,7 @@ public class RaceManager2D : MonoBehaviour
         runners.Clear();
         activeHazards.Clear();
         ClearObstacles();
-        uiCanvas = canvas != null ? canvas : FindFirstObjectByType<Canvas>();
+        uiCanvas = canvas != null ? canvas : GameObject.Find("Canvas").GetComponent<Canvas>();
         cameraFollow = Camera.main != null ? Camera.main.GetComponent<CameraFollow2D>() : null;
 
         RouteData route = routesRenderer.GetRouteData();
@@ -128,15 +128,15 @@ public class RaceManager2D : MonoBehaviour
     {
         if (route == null || !route.IsValid()) return;
 
-        // ÇÒ§ 3 á¶Ç ·Õè¤ÇÒÁÂÒÇÊ¹ÒÁ 25%, 50% áÅÐ 75%
+        // ï¿½Ò§ 3 ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê¹ï¿½ï¿½ 25%, 50% ï¿½ï¿½ï¿½ 75%
         float[] progressPoints = { 0.25f, 0.50f, 0.75f };
-        int boxesPerRow = 3; // á¶ÇÅÐ 3 ¡ÅèÍ§
+        int boxesPerRow = 3; // ï¿½ï¿½ï¿½ï¿½ 3 ï¿½ï¿½ï¿½Í§
 
         foreach (float progress in progressPoints)
         {
             Vector2 center = route.EvaluatePosition(progress);
             Vector2 normal = route.EvaluateNormal(progress);
-            float halfWidth = route.trackWidth * 0.4f; // ¡ÃÐ¨ÒÂ«éÒÂ¢ÇÒ
+            float halfWidth = route.trackWidth * 0.4f; // ï¿½ï¿½Ð¨ï¿½Â«ï¿½ï¿½Â¢ï¿½ï¿½
 
             for (int i = 0; i < boxesPerRow; i++)
             {
@@ -173,7 +173,7 @@ public class RaceManager2D : MonoBehaviour
 
         SpriteRenderer sr = boxObj.AddComponent<SpriteRenderer>();
         sr.sprite = GetSquareSprite();
-        sr.color = new Color(0.1f, 0.8f, 1f, 1f); // ãËé¡ÅèÍ§à»ç¹ÊÕ¿éÒÊÇèÒ§æ ¨Ðä´éÁÍ§àËç¹§èÒÂ
+        sr.color = new Color(0.1f, 0.8f, 1f, 1f); // ï¿½ï¿½ï¿½ï¿½ï¿½Í§ï¿½ï¿½ï¿½Õ¿ï¿½ï¿½ï¿½ï¿½ï¿½Ò§ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Í§ï¿½ï¿½ç¹§ï¿½ï¿½ï¿½
         sr.sortingOrder = 2;
         boxObj.transform.localScale = new Vector3(35f, 35f, 1f);
 
@@ -288,6 +288,7 @@ public class RaceManager2D : MonoBehaviour
         rankText = FindOrCreateText(canvas.transform, rankTextName, new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-18f, -18f), TextAlignmentOptions.TopRight);
         lapText = FindOrCreateText(canvas.transform, lapTextName, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(18f, -18f), TextAlignmentOptions.TopLeft);
         countDownText = FindOrCreateText(canvas.transform, countDownTextName, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, 90f), TextAlignmentOptions.Center);
+        Debug.Log($"countDownText: {countDownText}");
         ApplyUiFont(rankText);
         ApplyUiFont(lapText);
         if (countDownText != null)
@@ -625,6 +626,7 @@ public class RaceManager2D : MonoBehaviour
 
         if (text == null)
         {
+            Debug.Log($"Creating UI Text: {objectName}"); 
             GameObject textObject = new GameObject(objectName, typeof(RectTransform), typeof(TextMeshProUGUI));
             textObject.transform.SetParent(canvasTransform, false);
             text = textObject.GetComponent<TextMeshProUGUI>();

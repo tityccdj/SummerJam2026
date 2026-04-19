@@ -17,6 +17,7 @@ public class SceneHelper : MonoBehaviour
     [SerializeField] private string overHeatSliderName = "Slider (OverHeat)";
     [SerializeField] private int totalLapCount = 3;
     [SerializeField] private int cpuRunnerCount = 4;
+    [SerializeField] private Canvas canvas;
  
 
     private void Start()
@@ -172,7 +173,7 @@ public class SceneHelper : MonoBehaviour
         }
 
         raceManager.ConfigureRace(cpuRunnerCount, totalLapCount);
-        raceManager.SetupRace(playerRunner, routesRenderer, FindFirstObjectByType<Canvas>());
+        raceManager.SetupRace(playerRunner, routesRenderer, canvas);
         return raceManager;
     }
 
@@ -218,7 +219,6 @@ public class SceneHelper : MonoBehaviour
             return slider;
         }
 
-        Canvas canvas = FindFirstObjectByType<Canvas>();
         if (canvas == null)
         {
             return null;
@@ -324,26 +324,26 @@ public class SceneHelper : MonoBehaviour
     }
     private Image FindExistingItemUI()
     {
-        // 1. ค้นหาปุ่มทั้งหมดในจอ
+        // 1. ๏ฟฝ๏ฟฝ๏ฟฝาป๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝในจ๏ฟฝ
         Button[] buttons = FindObjectsByType<Button>(FindObjectsSortMode.None);
         foreach (Button button in buttons)
         {
-            // 2. หาปุ่มที่มีคำว่า "item" (ซึ่งจะตรงกับ Button (Item) ของคุณ)
+            // 2. ๏ฟฝาป๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝีค๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ "item" (๏ฟฝ๏ฟฝ่งจะตรง๏ฟฝับ Button (Item) ๏ฟฝอง๏ฟฝุณ)
             if (button.gameObject.name.ToLowerInvariant().Contains("item"))
             {
-                // 3. เข้าไปหา Object ลูกที่ชื่อ "Image" ตามโครงสร้างใน Hierarchy ของคุณ
+                // 3. ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ Object ๏ฟฝูก๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ "Image" ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝรง๏ฟฝ๏ฟฝ๏ฟฝาง๏ฟฝ Hierarchy ๏ฟฝอง๏ฟฝุณ
                 Transform targetImageObj = button.transform.Find("imgitem");
 
                 if (targetImageObj != null)
                 {
                     Image iconImage = targetImageObj.GetComponent<Image>();
-                    iconImage.enabled = false; // ซ่อนรูปไว้ก่อนตอนเริ่มเกม
+                    iconImage.enabled = false; // ๏ฟฝ๏ฟฝอน๏ฟฝูป๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝอน๏ฟฝอน๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ
                     return iconImage;
                 }
             }
         }
 
-        Debug.LogWarning("หาช่องใส่รูปไอเทมไม่เจอ! กรุณาเช็กว่าปุ่มชื่อ Button (Item) มีลูกชื่อ Image หรือไม่");
+        Debug.LogWarning("๏ฟฝาช๏ฟฝอง๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝูป๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ! ๏ฟฝ๏ฟฝุณ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝาป๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ Button (Item) ๏ฟฝ๏ฟฝ๏ฟฝูก๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ Image ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ");
         return null;
     }
 }
