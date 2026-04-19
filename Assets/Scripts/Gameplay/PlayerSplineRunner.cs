@@ -371,13 +371,13 @@ public class PlayerSplineRunner : MonoBehaviour
         SyncSlider();
     }
 
-    public void ApplyRearHitEffect(float speedBoostAmount, float duration, float heatMultiplier, float extraHeat)
-    {
-        forwardSpeed = Mathf.Min(maxForwardSpeed * 1.45f, forwardSpeed + speedBoostAmount);
-        TriggerCollisionAnimation(duration);
-        ApplyExternalHeat(extraHeat, heatMultiplier, duration);
-        rearHitImmunityTimer = Mathf.Max(rearHitImmunityTimer, duration * 0.5f);
-    }
+    //public void ApplyRearHitEffect(float speedBoostAmount, float duration, float heatMultiplier, float extraHeat)
+    //{
+    //    forwardSpeed = Mathf.Min(maxForwardSpeed * 1.45f, forwardSpeed + speedBoostAmount);
+    //    TriggerCollisionAnimation(duration);
+    //    ApplyExternalHeat(extraHeat, heatMultiplier, duration);
+    //    rearHitImmunityTimer = Mathf.Max(rearHitImmunityTimer, duration * 0.5f);
+    //}
 
     public void ResetHeat()
     {
@@ -487,18 +487,18 @@ public class PlayerSplineRunner : MonoBehaviour
             hazardDropTimer -= Time.deltaTime;
         }
 
-        randomHeatTimer += Time.deltaTime;
-        if (!isFinished && randomHeatTimer >= randomHeatCooldown)
-        {
-            randomHeatTimer = 0f;
-            randomHeatCooldown = GetNextRandomHeatCooldown();
+        //randomHeatTimer += Time.deltaTime;
+        //if (!isFinished && randomHeatTimer >= randomHeatCooldown)
+        //{
+        //    randomHeatTimer = 0f;
+        //    randomHeatCooldown = GetNextRandomHeatCooldown();
 
-            if (Random.value <= randomHeatBurstChance)
-            {
-                float extraHeat = Random.Range(randomHeatBurstAmountRange.x, randomHeatBurstAmountRange.y);
-                ApplyExternalHeat(extraHeat, 1f, 0f);
-            }
-        }
+        //    if (Random.value <= randomHeatBurstChance)
+        //    {
+        //        float extraHeat = Random.Range(randomHeatBurstAmountRange.x, randomHeatBurstAmountRange.y);
+        //        ApplyExternalHeat(extraHeat, 1f, 0f);
+        //    }
+        //}
 
         if (isOverHeated && currentOverHeat <= overHeatRecoverThreshold)
         {

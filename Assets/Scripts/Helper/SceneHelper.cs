@@ -81,7 +81,7 @@ public class SceneHelper : MonoBehaviour
         Joystick joystick = FindFirstObjectByType<Joystick>();
         if (joystick != null)
         {
-            joystick.AxisOptions = AxisOptions.Horizontal;
+            joystick.AxisOptions = AxisOptions.Both;
             joystick.SnapX = false;
             joystick.SnapY = false;
         }
