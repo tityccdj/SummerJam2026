@@ -20,7 +20,7 @@ public class RaceManager2D : MonoBehaviour
     [SerializeField] private string playerPrefabResourcesPath = "characters/Player";
     [SerializeField] private string characterPrefabResourcesPath = "prefabs/character";
     [SerializeField] private float hazardLifetime = 7f;
-    [SerializeField] private float hazardRadius = 0.75f;
+    [SerializeField] private float hazardRadius = 1f;
     [SerializeField] private float hazardHeatAmount = 20f;
     [SerializeField] private float hazardHeatMultiplier = 1.5f;
     [SerializeField] private float hazardHeatDuration = 2.2f;
@@ -57,6 +57,7 @@ public class RaceManager2D : MonoBehaviour
     private readonly List<PlayerSplineRunner> runners = new List<PlayerSplineRunner>();
     private readonly List<RaceHazard2D> activeHazards = new List<RaceHazard2D>();
     private readonly List<RaceObstacle2D> activeObstacles = new List<RaceObstacle2D>();
+    private readonly List<RaceItemBox2D> activeItemBoxes = new List<RaceItemBox2D>();
     private TextMeshProUGUI rankText;
     private TextMeshProUGUI lapText;
     private TextMeshProUGUI countDownText;
@@ -80,7 +81,7 @@ public class RaceManager2D : MonoBehaviour
         {
             return;
         }
-
+        activeItemBoxes.Clear();
         runners.Clear();
         activeHazards.Clear();
         ClearObstacles();
@@ -113,7 +114,7 @@ public class RaceManager2D : MonoBehaviour
         }
 
         SpawnObstacles(route);
-
+        SpawnItemBoxes(route);
         SetAllRunnersRaceActive(false);
         if (countdownRoutine != null)
         {
@@ -123,7 +124,62 @@ public class RaceManager2D : MonoBehaviour
         countdownRoutine = StartCoroutine(PlayCountdown());
         UpdateUi();
     }
+    private void SpawnItemBoxes(RouteData route)
+    {
+        if (route == null || !route.IsValid()) return;
 
+        // วาง 3 แถว ที่ความยาวสนาม 25%, 50% และ 75%
+        float[] progressPoints = { 0.25f, 0.50f, 0.75f };
+        int boxesPerRow = 3; // แถวละ 3 กล่อง
+
+        foreach (float progress in progressPoints)
+        {
+            Vector2 center = route.EvaluatePosition(progress);
+            Vector2 normal = route.EvaluateNormal(progress);
+            float halfWidth = route.trackWidth * 0.4f; // กระจายซ้ายขวา
+
+            for (int i = 0; i < boxesPerRow; i++)
+            {
+                float lateral = Mathf.Lerp(-halfWidth, halfWidth, i / (float)(boxesPerRow - 1));
+                Vector2 pos = center + normal * lateral;
+
+                CreateItemBox(pos);
+            }
+        }
+    }
+    private void UpdateItemBoxHits()
+    {
+        foreach (PlayerSplineRunner runner in runners)
+        {
+            if (runner == null || runner.IsFinished) continue;
+
+            foreach (RaceItemBox2D box in activeItemBoxes)
+            {
+                if (box.IsAvailable)
+                {
+                    if (Vector2.Distance(runner.transform.position, box.transform.position) <= box.TriggerRadius + 0.2f)
+                    {
+                        box.Collect(runner);
+                    }
+                }
+            }
+        }
+    }
+    private void CreateItemBox(Vector2 worldPos)
+    {
+        GameObject boxObj = new GameObject("ItemBox");
+        boxObj.transform.SetParent(transform, false);
+        boxObj.transform.position = new Vector3(worldPos.x, worldPos.y, 0f);
+
+        SpriteRenderer sr = boxObj.AddComponent<SpriteRenderer>();
+        sr.sprite = GetSquareSprite();
+        sr.color = new Color(0.1f, 0.8f, 1f, 1f); // ให้กล่องเป็นสีฟ้าสว่างๆ จะได้มองเห็นง่าย
+        sr.sortingOrder = 2;
+        boxObj.transform.localScale = new Vector3(35f, 35f, 1f);
+
+        RaceItemBox2D box = boxObj.AddComponent<RaceItemBox2D>();
+        activeItemBoxes.Add(box);
+    }
     private void Update()
     {
         if (humanRunner == null || runners.Count == 0)
@@ -134,9 +190,9 @@ public class RaceManager2D : MonoBehaviour
         UpdateHazardDrops();
         UpdateHazardHits();
         //UpdateRearHits();
-        UpdateRunnerCollisions();
+        //UpdateRunnerCollisions();
         UpdateObstacleHits();
-
+        UpdateItemBoxHits();
         UpdateUi();
     }
 
@@ -356,7 +412,7 @@ public class RaceManager2D : MonoBehaviour
 
             if (runner.TryConsumeHazardDrop(out Vector3 worldPosition))
             {
-                //SpawnHazard(runner, worldPosition);
+                SpawnHazard(runner, worldPosition);
             }
         }
     }
@@ -749,10 +805,9 @@ public class RaceManager2D : MonoBehaviour
         hazardObject.transform.position = new Vector3(worldPosition.x, worldPosition.y, 0f);
 
         SpriteRenderer hazardRenderer = hazardObject.AddComponent<SpriteRenderer>();
-        hazardRenderer.sprite = GetSquareSprite();
-        hazardRenderer.color = new Color(0.22f, 0.1f, 0.08f, 1f);
+        hazardRenderer.sprite = Resources.Load<Sprite>("Item/Banana");
         hazardRenderer.sortingOrder = 2;
-        hazardObject.transform.localScale = new Vector3(0.38f, 0.38f, 1f);
+        hazardObject.transform.localScale = new Vector3(1f, 1f, 1f);
 
         RaceHazard2D hazard = hazardObject.AddComponent<RaceHazard2D>();
         hazard.Initialize(owner, hazardLifetime, hazardRadius, hazardHeatAmount, hazardHeatMultiplier, hazardHeatDuration);

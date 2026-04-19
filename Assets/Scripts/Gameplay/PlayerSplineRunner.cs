@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.UI;
 
 [DisallowMultipleComponent]
@@ -18,6 +18,7 @@ public class PlayerSplineRunner : MonoBehaviour
     [SerializeField] private Joystick joystick;
     [SerializeField] private Slider overheatSlider;
     [SerializeField] private Character character;
+    [SerializeField] private Image itemUIImage; // ตัวแปรอ้างอิงช่อง UI เก็บไอเทม
 
     [Header("Runner")]
     [SerializeField] private string runnerName = "Runner";
@@ -32,17 +33,17 @@ public class PlayerSplineRunner : MonoBehaviour
     [Header("Movement")]
     [SerializeField] private float pumpImpulse = 0.1f;
     [SerializeField] private float joystickAcceleration = 0.08f;
-    [SerializeField] private float maxForwardSpeed = 0.07f;
-    [SerializeField] private float speedDamping = 0.05f;
+    [SerializeField] private float maxForwardSpeed = 0.05f;
+    [SerializeField] private float speedDamping = 0.04f;
     [SerializeField] private float lateralMoveSpeed = 2.4f;
     [SerializeField] private float lateralReturnSpeed = 1.4f;
     [SerializeField] private float lateralTrackPadding = 0.75f;
 
     [Header("OverHeat")]
-    [SerializeField] private float maxOverHeat = 150f;
-    [SerializeField] private float runHeatGain = 12f;
+    [SerializeField] private float maxOverHeat = 200f;
+    [SerializeField] private float runHeatGain = 20f;
     [SerializeField] private float passiveCoolRate = 10f;
-    [SerializeField] private float coolDownTapAmount = 30f;
+    [SerializeField] private float coolDownTapAmount = 40f;
     [SerializeField] private float overHeatRecoverThreshold = 55f;
     [SerializeField] private float globalSpeedMultiplier = 0.9f;
     [SerializeField] private float overHeatTopSpeedMultiplier = 0.42f;
@@ -56,13 +57,18 @@ public class PlayerSplineRunner : MonoBehaviour
     [Header("Human Input")]
     [SerializeField] private KeyCode runKey = KeyCode.O;
     [SerializeField] private KeyCode coolDownKey = KeyCode.P;
-    [SerializeField] private KeyCode dropHazardKey = KeyCode.I;
+    [SerializeField] private KeyCode useItemKey = KeyCode.Space;
     [SerializeField] private KeyCode leftKey = KeyCode.A;
     [SerializeField] private KeyCode rightKey = KeyCode.D;
     [SerializeField] private KeyCode upKey = KeyCode.W;
     [SerializeField] private KeyCode downKey = KeyCode.S;
     [SerializeField] private KeyCode altLeftKey = KeyCode.LeftArrow;
     [SerializeField] private KeyCode altRightKey = KeyCode.RightArrow;
+    [Header("Inventory")]
+    public RaceItemType currentItem = RaceItemType.None;
+    private float heatImmunityEndTime = 0f;
+    private float speedDampingMultiplier = 1f;
+    private Coroutine colorEffectCoroutine;
 
     [Header("CPU AI")]
     [SerializeField] private Vector2 aiPumpIntervalRange = new Vector2(0.22f, 0.65f);
@@ -130,7 +136,37 @@ public class PlayerSplineRunner : MonoBehaviour
     public bool CanReceiveRearHit => rearHitImmunityTimer <= 0f && !isFinished;
     public event System.Action<PlayerSplineRunner> LapCompleted;
     public event System.Action<PlayerSplineRunner> RaceFinished;
+    private void UpdateItemUI()
+    {
+        // ถ้าไม่ใช่คนเล่น หรือไม่ได้ใส่ช่อง UI ไว้ ให้ข้ามไปเลย (AI ไม่ต้องมี UI)
+        if (!isHuman || itemUIImage == null) return;
 
+        if (currentItem == RaceItemType.None)
+        {
+            // ถ้ามือว่าง ให้ซ่อนรูปไอเทม
+            itemUIImage.enabled = false;
+            itemUIImage.sprite = null;
+        }
+        else
+        {
+            // ถ้ามีของ ให้โหลดภาพจากโฟลเดอร์ Resources/Item/ ตามชื่อไอเทม
+            Sprite loadedSprite = Resources.Load<Sprite>($"Item/{currentItem.ToString()}");
+
+            if (loadedSprite != null)
+            {
+                itemUIImage.sprite = loadedSprite;
+                itemUIImage.enabled = true; // เปิดการแสดงผล
+            }
+            else
+            {
+                Debug.LogWarning($"หาภาพไอเทมไม่เจอ! กรุณาเช็กว่ามีไฟล์ชื่อ {currentItem} อยู่ใน Resources/Item/ หรือไม่");
+            }
+        }
+    }
+    public void SetItemUI(Image uiImage)
+    {
+        itemUIImage = uiImage;
+    }
     public void BindSceneReferences(RoutesRenderer renderer, Joystick movementJoystick, Slider heatSlider)
     {
         routesRenderer = renderer;
@@ -192,7 +228,58 @@ public class PlayerSplineRunner : MonoBehaviour
             StopHumanGaspLoop();
         }
     }
+    public bool ReceiveItem(RaceItemType newItem)
+    {
+        if (currentItem != RaceItemType.None)
+        {
+            return false; // มีของอยู่แล้ว เก็บไม่ได้
+        }
 
+        currentItem = newItem;
+        UpdateItemUI();
+        Debug.Log($"<color=cyan> [{RunnerName}] </color> เก็บไอเทมได้: <color=yellow> {newItem} </color>");
+        // AudioManager.Instance?.PlaySFXOneShot("item_box_pickup"); // ถ้ามีเสียงค่อยเปิดคอมเมนต์
+        return true;
+    }
+    public void UseItem()
+    {
+        if (currentItem == RaceItemType.None) return;
+
+        if (colorEffectCoroutine != null)
+        {
+            StopCoroutine(colorEffectCoroutine);
+        }
+        switch (currentItem)
+        {
+            case RaceItemType.Soda:
+                ApplySpeedBoost(1.5f, 2f);
+                heatImmunityEndTime = Time.time + 2f;
+                speedDampingMultiplier = 0.5f;
+                // โซดา: ตัวเรืองแสงสีเหลืองทอง 3 วินาที (ให้เท่ากับเวลาบัฟสปีด)
+                colorEffectCoroutine = StartCoroutine(ItemColorEffect(new Color(1f, 0.8f, 0.2f), 3f));
+                Debug.Log($"<color=lime> [{RunnerName}] </color> กดใช้: <color=orange> Soda  </color>");
+                break;
+
+            case RaceItemType.Banana:
+                QueueHazardDrop();
+                // กล้วย: ตัวกระพริบเป็นสีเขียวตองอ่อน 1 วินาที
+                colorEffectCoroutine = StartCoroutine(ItemColorEffect(Color.green, 1f));
+                Debug.Log($"<color=lime> [{RunnerName}] </color> กดใช้: <color=yellow> Banana  </color>");
+                break;
+
+            case RaceItemType.Ice:
+                ResetHeat();
+                heatImmunityEndTime = Time.time + 3f;
+                // น้ำแข็ง: ตัวเย็นเยือกเป็นสีฟ้าประกาย 1 วินาที
+                colorEffectCoroutine = StartCoroutine(ItemColorEffect(Color.cyan, 1f));
+                Debug.Log($"<color=lime> [{RunnerName}] </color> กดใช้: <color=cyan> Ice ❄ </color>");
+                break;
+        }
+
+        // ใช้เสร็จแล้ว เคลียร์มือให้ว่าง
+        currentItem = RaceItemType.None;
+        UpdateItemUI();
+    }
     public void PlayerRun()
     {
         if (!raceActive || isFinished || isOverHeated)
@@ -200,12 +287,18 @@ public class PlayerSplineRunner : MonoBehaviour
             return;
         }
 
-        forwardSpeed = Mathf.Min(maxForwardSpeed, forwardSpeed + pumpImpulse);
-        currentOverHeat = Mathf.Clamp(currentOverHeat + (runHeatGain * currentHeatMultiplier), 0f, maxOverHeat);
+        // 1. เพิ่มความเร็ว (ความเร็วเพิ่มได้เสมอ ไม่ว่าจะอมตะหรือไม่)
+        forwardSpeed = Mathf.Min(maxForwardSpeed * speedBoostMultiplier, forwardSpeed + pumpImpulse);
 
-        if (currentOverHeat >= maxOverHeat)
+        // 2. เพิ่มความร้อน (เฉพาะตอนที่บัฟอมตะหมดเวลาแล้วเท่านั้น)
+        if (Time.time > heatImmunityEndTime)
         {
-            isOverHeated = true;
+            currentOverHeat = Mathf.Clamp(currentOverHeat + (runHeatGain * currentHeatMultiplier), 0f, maxOverHeat);
+
+            if (currentOverHeat >= maxOverHeat)
+            {
+                isOverHeated = true;
+            }
         }
 
         if (isHuman)
@@ -361,6 +454,11 @@ public class PlayerSplineRunner : MonoBehaviour
         {
             currentOverHeat = Mathf.Max(0f, currentOverHeat - passiveCoolRate * Time.deltaTime);
         }
+        if (Time.time >= speedBoostEndTime)
+        {
+            speedBoostMultiplier = 1f;
+            speedDampingMultiplier = 1f;
+        }
 
         if (heatMultiplierTimer > 0f)
         {
@@ -418,7 +516,7 @@ public class PlayerSplineRunner : MonoBehaviour
 
         forwardSpeed += forwardInput * joystickAcceleration * accelerationScale * Time.deltaTime;
         forwardSpeed = Mathf.Clamp(forwardSpeed, -reverseSpeedLimit, sprintCap);
-        forwardSpeed = Mathf.MoveTowards(forwardSpeed, 0f, speedDamping * Time.deltaTime);
+        forwardSpeed = Mathf.MoveTowards(forwardSpeed, 0f, speedDamping * speedDampingMultiplier * Time.deltaTime);
         if (forwardSpeed > targetTopSpeed)
         {
             forwardSpeed = Mathf.MoveTowards(forwardSpeed, targetTopSpeed, speedDamping * 1.8f * Time.deltaTime);
@@ -528,9 +626,10 @@ public class PlayerSplineRunner : MonoBehaviour
             CoolDown();
         }
 
-        if (Input.GetKeyDown(dropHazardKey))
+        if (Input.GetKeyDown(useItemKey))
         {
-            QueueHazardDrop();
+            //QueueHazardDrop();
+            UseItem();
         }
     }
 
@@ -603,7 +702,8 @@ public class PlayerSplineRunner : MonoBehaviour
 
         if (currentOverHeat < maxOverHeat * 0.88f)
         {
-            QueueHazardDrop();
+            //QueueHazardDrop();
+            UseItem();
         }
     }
 
@@ -785,6 +885,31 @@ public class PlayerSplineRunner : MonoBehaviour
         else if (currentFacingTangentX <= -tangentFlipThreshold)
         {
             character.SetFlipX(!defaultSpriteFlipX);
+        }
+    }
+    private System.Collections.IEnumerator ItemColorEffect(Color effectColor, float duration)
+    {
+        // 1. ดึง Component การวาดภาพทั้งหมดในตัวละคร (รวมถึง AI ด้วย)
+        SpriteRenderer[] renderers = GetComponentsInChildren<SpriteRenderer>();
+        Color[] originalColors = new Color[renderers.Length];
+
+        // 2. จำสีเดิมของแต่ละชิ้นส่วน และเปลี่ยนเป็นสีไอเทม
+        for (int i = 0; i < renderers.Length; i++)
+        {
+            originalColors[i] = renderers[i].color;
+            renderers[i].color = effectColor;
+        }
+
+        // 3. รอเวลาตามที่กำหนด (ชั่วคราว)
+        yield return new WaitForSeconds(duration);
+
+        // 4. คืนค่าสีเดิมให้ตัวละคร
+        for (int i = 0; i < renderers.Length; i++)
+        {
+            if (renderers[i] != null)
+            {
+                renderers[i].color = originalColors[i];
+            }
         }
     }
 }

@@ -17,6 +17,7 @@ public class SceneHelper : MonoBehaviour
     [SerializeField] private string overHeatSliderName = "Slider (OverHeat)";
     [SerializeField] private int totalLapCount = 3;
     [SerializeField] private int cpuRunnerCount = 4;
+ 
 
     private void Start()
     {
@@ -85,11 +86,15 @@ public class SceneHelper : MonoBehaviour
         }
 
         Slider slider = FindOrCreateOverHeatSlider();
+
+        Image itemUI = FindExistingItemUI();
         if (playerRunner != null)
         {
             playerRunner.ConfigureRunner("Player", true, routesRenderer, joystick, slider, totalLapCount);
             playerRunner.ResetRunnerState(0f, 0f);
+            playerRunner.SetItemUI(itemUI);
         }
+        
 
         RaceManager2D raceManager = SetupRaceManager(playerRunner, routesRenderer);
         PlayerSplineRunner activeHumanRunner = raceManager != null && raceManager.HumanRunner != null
@@ -100,6 +105,7 @@ public class SceneHelper : MonoBehaviour
         {
             activeHumanRunner.ConfigureRunner("Player", true, routesRenderer, joystick, slider, totalLapCount);
             activeHumanRunner.ResetRunnerState(0f, 0f);
+            activeHumanRunner.SetItemUI(itemUI);
         }
 
         BindButtons(activeHumanRunner);
@@ -143,6 +149,10 @@ public class SceneHelper : MonoBehaviour
             else if (buttonName.Contains("cool"))
             {
                 button.onClick.AddListener(playerRunner.CoolDown);
+            }
+            else if (buttonName.Contains("item"))
+            {
+                button.onClick.AddListener(playerRunner.UseItem);
             }
         }
     }
@@ -311,5 +321,29 @@ public class SceneHelper : MonoBehaviour
         }
 
         return 1;
+    }
+    private Image FindExistingItemUI()
+    {
+        // 1. ค้นหาปุ่มทั้งหมดในจอ
+        Button[] buttons = FindObjectsByType<Button>(FindObjectsSortMode.None);
+        foreach (Button button in buttons)
+        {
+            // 2. หาปุ่มที่มีคำว่า "item" (ซึ่งจะตรงกับ Button (Item) ของคุณ)
+            if (button.gameObject.name.ToLowerInvariant().Contains("item"))
+            {
+                // 3. เข้าไปหา Object ลูกที่ชื่อ "Image" ตามโครงสร้างใน Hierarchy ของคุณ
+                Transform targetImageObj = button.transform.Find("imgitem");
+
+                if (targetImageObj != null)
+                {
+                    Image iconImage = targetImageObj.GetComponent<Image>();
+                    iconImage.enabled = false; // ซ่อนรูปไว้ก่อนตอนเริ่มเกม
+                    return iconImage;
+                }
+            }
+        }
+
+        Debug.LogWarning("หาช่องใส่รูปไอเทมไม่เจอ! กรุณาเช็กว่าปุ่มชื่อ Button (Item) มีลูกชื่อ Image หรือไม่");
+        return null;
     }
 }
