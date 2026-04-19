@@ -56,8 +56,11 @@ public class PlayerSplineRunner : MonoBehaviour
 
     [Header("Human Input")]
     [SerializeField] private KeyCode runKey = KeyCode.O;
+    [SerializeField] private KeyCode altRunKey = KeyCode.LeftControl;
     [SerializeField] private KeyCode coolDownKey = KeyCode.P;
+    [SerializeField] private KeyCode altCoolDownKey = KeyCode.Z;
     [SerializeField] private KeyCode useItemKey = KeyCode.Space;
+    [SerializeField] private KeyCode altUseItemKey = KeyCode.LeftShift;
     [SerializeField] private KeyCode leftKey = KeyCode.A;
     [SerializeField] private KeyCode rightKey = KeyCode.D;
     [SerializeField] private KeyCode upKey = KeyCode.W;
@@ -507,8 +510,52 @@ public class PlayerSplineRunner : MonoBehaviour
 
     private void UpdateMovement(RouteData route)
     {
+        //float forwardInput = isHuman ? GetHumanForwardInput() : GetCpuForwardInput();
+        //float horizontalInput = isHuman ? GetHumanHorizontalInput() : GetCpuHorizontalInput();
+        //float accelerationScale = isOverHeated ? overHeatAccelerationMultiplier : 1f;
+        //float targetTopSpeed = maxForwardSpeed * globalSpeedMultiplier * (isOverHeated ? overHeatTopSpeedMultiplier : 1f) * speedBoostMultiplier;
+        //float reverseSpeedLimit = maxForwardSpeed * globalSpeedMultiplier * 0.2f;
+        //float sprintCap = targetTopSpeed * 1.45f;
+
+        //forwardSpeed += forwardInput * joystickAcceleration * accelerationScale * Time.deltaTime;
+        //forwardSpeed = Mathf.Clamp(forwardSpeed, -reverseSpeedLimit, sprintCap);
+        //forwardSpeed = Mathf.MoveTowards(forwardSpeed, 0f, speedDamping * speedDampingMultiplier * Time.deltaTime);
+        //if (forwardSpeed > targetTopSpeed)
+        //{
+        //    forwardSpeed = Mathf.MoveTowards(forwardSpeed, targetTopSpeed, speedDamping * 1.8f * Time.deltaTime);
+        //}
+
+        //float previousProgress = progress;
+        //progress = route.closed
+        //    ? Mathf.Repeat(progress + forwardSpeed * Time.deltaTime, 1f)
+        //    : Mathf.Clamp01(progress + forwardSpeed * Time.deltaTime);
+
+        //float offsetLimit = Mathf.Max(0.15f, route.trackWidth * lateralTrackPadding * 0.5f);
+        //float signedHorizontalInput = ResolveScreenConsistentHorizontal(horizontalInput, route);
+        //if (Mathf.Abs(signedHorizontalInput) > 0.01f)
+        //{
+        //    lateralOffset += signedHorizontalInput * lateralMoveSpeed * Time.deltaTime;
+        //}
+
+        //lateralOffset = Mathf.Clamp(lateralOffset, -offsetLimit, offsetLimit);
+
+        //Vector2 routePosition = route.EvaluatePosition(progress);
+        //Vector2 routeNormal = route.EvaluateNormal(progress);
+        //Vector2 routeTangent = route.EvaluateTangent(progress);
+        //currentRouteTangent = routeTangent.sqrMagnitude > 0.001f ? routeTangent.normalized : Vector2.right;
+        //currentFacingTangentX = currentRouteTangent.x;
+        //Vector2 finalPosition = routePosition + routeNormal * lateralOffset;
+
+        //transform.position = new Vector3(finalPosition.x, finalPosition.y, transform.position.z);
+        //transform.rotation = Quaternion.identity;
+
+        //if (!hasProgressSample)
+        //{
+        //    lastProgressSample = previousProgress;
+        //    hasProgressSample = true;
+        //}
+        // 1. คำนวณความเร็ว (ดึงค่า GetHumanForwardInput ซึ่งตอนนี้คือ 0 รถจะวิ่งจากแรง Pump เท่านั้น)
         float forwardInput = isHuman ? GetHumanForwardInput() : GetCpuForwardInput();
-        float horizontalInput = isHuman ? GetHumanHorizontalInput() : GetCpuHorizontalInput();
         float accelerationScale = isOverHeated ? overHeatAccelerationMultiplier : 1f;
         float targetTopSpeed = maxForwardSpeed * globalSpeedMultiplier * (isOverHeated ? overHeatTopSpeedMultiplier : 1f) * speedBoostMultiplier;
         float reverseSpeedLimit = maxForwardSpeed * globalSpeedMultiplier * 0.2f;
@@ -527,18 +574,33 @@ public class PlayerSplineRunner : MonoBehaviour
             ? Mathf.Repeat(progress + forwardSpeed * Time.deltaTime, 1f)
             : Mathf.Clamp01(progress + forwardSpeed * Time.deltaTime);
 
-        float offsetLimit = Mathf.Max(0.15f, route.trackWidth * lateralTrackPadding * 0.5f);
-        float signedHorizontalInput = ResolveScreenConsistentHorizontal(horizontalInput, route);
-        if (Mathf.Abs(signedHorizontalInput) > 0.01f)
+        // 🌟 2. คำนวณข้อมูลถนน ณ ตำแหน่งปัจจุบัน
+        Vector2 routePosition = route.EvaluatePosition(progress);
+        Vector2 routeNormal = route.EvaluateNormal(progress);
+        Vector2 routeTangent = route.EvaluateTangent(progress);
+
+        // 🌟 3. คำนวณการบังคับเลี้ยว (โยกเลน)
+        float lateralInput = 0f;
+        if (isHuman)
         {
-            lateralOffset += signedHorizontalInput * lateralMoveSpeed * Time.deltaTime;
+            // คนเล่น: ใช้ระบบใหม่ที่ฉลาดขึ้น (อิงหน้าจอ + แนวถนน)
+            lateralInput = GetHumanLateralInput(routeNormal);
+        }
+        else
+        {
+            // AI: ใช้ระบบเดิม
+            lateralInput = ResolveScreenConsistentHorizontal(GetCpuHorizontalInput(), route);
+        }
+
+        float offsetLimit = Mathf.Max(0.15f, route.trackWidth * lateralTrackPadding * 0.5f);
+        if (Mathf.Abs(lateralInput) > 0.01f)
+        {
+            lateralOffset += lateralInput * lateralMoveSpeed * Time.deltaTime;
         }
 
         lateralOffset = Mathf.Clamp(lateralOffset, -offsetLimit, offsetLimit);
 
-        Vector2 routePosition = route.EvaluatePosition(progress);
-        Vector2 routeNormal = route.EvaluateNormal(progress);
-        Vector2 routeTangent = route.EvaluateTangent(progress);
+        // 4. อัปเดตตำแหน่งและทิศทางหันหน้าลงใน Scene
         currentRouteTangent = routeTangent.sqrMagnitude > 0.001f ? routeTangent.normalized : Vector2.right;
         currentFacingTangentX = currentRouteTangent.x;
         Vector2 finalPosition = routePosition + routeNormal * lateralOffset;
@@ -591,48 +653,78 @@ public class PlayerSplineRunner : MonoBehaviour
         }
     }
 
+    //private float GetHumanForwardInput()
+    //{
+    //    return joystick != null ? joystick.Vertical : 0f;
+    //}
     private float GetHumanForwardInput()
     {
-        return joystick != null ? joystick.Vertical : 0f;
+        return 0f;
     }
-
-    private float GetHumanHorizontalInput()
+    private float GetHumanLateralInput(Vector2 routeNormal)
     {
-        float keyboardHorizontal = 0f;
+        Vector2 inputDir = Vector2.zero;
 
-        if (Input.GetKey(leftKey) || Input.GetKey(altLeftKey))
+        // รับค่าปุ่มกดทิศทาง 4 ทิศ (W A S D หรือ ลูกศร)
+        if (Input.GetKey(KeyCode.W) || Input.GetKey(KeyCode.UpArrow)) { inputDir.y += 1f; }
+        if (Input.GetKey(KeyCode.S) || Input.GetKey(KeyCode.DownArrow)) { inputDir.y -= 1f; }
+        if (Input.GetKey(KeyCode.D) || Input.GetKey(KeyCode.RightArrow)) { inputDir.x += 1f; }
+        if (Input.GetKey(KeyCode.A) || Input.GetKey(KeyCode.LeftArrow)) { inputDir.x -= 1f; }
+
+        // รับค่าจาก Joystick (ดันได้ทุกทิศทาง)
+        if (joystick != null)
         {
-            keyboardHorizontal -= 1f;
+            inputDir.x += joystick.Horizontal;
+            inputDir.y += joystick.Vertical;
         }
 
-        if (Input.GetKey(rightKey) || Input.GetKey(altRightKey))
+        // จำกัดความยาวเวกเตอร์ไม่ให้เกิน 1 (กันกดเฉียงแล้วพุ่งเร็วกว่าปกติ)
+        if (inputDir.sqrMagnitude > 1f)
         {
-            keyboardHorizontal += 1f;
+            inputDir.Normalize();
         }
 
-        float joystickHorizontal = joystick != null ? joystick.Horizontal : 0f;
-        return Mathf.Clamp(keyboardHorizontal + joystickHorizontal, -1f, 1f);
+        // 🌟 หัวใจสำคัญ: นำทิศทางที่กด (หน้าจอ) ไปทาบกับ ทิศทางขวางของถนน (Normal)
+        // ถ้าถนนเป็นแนวตั้ง กด A/D รถจะเลี้ยว / ถ้าถนนเป็นแนวนอน กด W/S รถจะเลี้ยวอัตโนมัติ!
+        return Vector2.Dot(inputDir, routeNormal);
     }
+
+    //private float GetHumanHorizontalInput()
+    //{
+    //    float keyboardHorizontal = 0f;
+
+    //    if (Input.GetKey(leftKey) || Input.GetKey(altLeftKey))
+    //    {
+    //        keyboardHorizontal -= 1f;
+    //    }
+
+    //    if (Input.GetKey(rightKey) || Input.GetKey(altRightKey))
+    //    {
+    //        keyboardHorizontal += 1f;
+    //    }
+
+    //    float joystickHorizontal = joystick != null ? joystick.Horizontal : 0f;
+    //    return Mathf.Clamp(keyboardHorizontal + joystickHorizontal, -1f, 1f);
+    //}
 
     private void HandleHumanActionInput()
     {
-        if (Input.GetKeyDown(runKey))
+        if (Input.GetKeyDown(runKey)||Input.GetKeyDown(altRunKey))
         {
             PlayerRun();
         }
 
-        if (Input.GetKeyDown(coolDownKey))
+        if (Input.GetKeyDown(coolDownKey)||Input.GetKeyDown(altCoolDownKey))
         {
             CoolDown();
         }
 
-        if (Input.GetKeyDown(useItemKey))
+        if (Input.GetKeyDown(useItemKey)||Input.GetKeyDown(altUseItemKey))
         {
             //QueueHazardDrop();
             UseItem();
         }
     }
-
     private float GetCpuForwardInput()
     {
         aiPumpTimer += Time.deltaTime;

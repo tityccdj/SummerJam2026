@@ -369,8 +369,8 @@ public class RaceManager2D : MonoBehaviour
         }
 
         countDownText.gameObject.SetActive(true);
-        //string[] steps = { "3", "2", "1" };
-        string[] steps = {  "1" };
+        string[] steps = { "3", "2", "1" };
+        //string[] steps = {  "1" };
 
         foreach (string step in steps)
         {
