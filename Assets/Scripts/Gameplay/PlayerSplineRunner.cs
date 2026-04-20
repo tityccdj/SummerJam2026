@@ -273,9 +273,9 @@ public class PlayerSplineRunner : MonoBehaviour
             case RaceItemType.Ice:
                 ResetHeat();
                 heatImmunityEndTime = Time.time + 3f;
-                // น้ำแข็ง: ตัวเย็นเยือกเป็นสีฟ้าประกาย 1 วินาที
-                colorEffectCoroutine = StartCoroutine(ItemColorEffect(Color.cyan, 1f));
-                Debug.Log($"<color=lime> [{RunnerName}] </color> กดใช้: <color=cyan> Ice ❄ </color>");
+               
+                colorEffectCoroutine = StartCoroutine(ItemColorEffect(Color.cyan, 3f));
+                Debug.Log($"<color=lime> [{RunnerName}] </color> กดใช้: <color=cyan> Ice  </color>");
                 break;
         }
 

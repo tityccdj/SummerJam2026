@@ -1,9 +1,11 @@
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using System.Collections;
 using TMPro;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using UnityEngine.UI;
+using static RaceResult;
 
 [DisallowMultipleComponent]
 public class RaceManager2D : MonoBehaviour
@@ -13,8 +15,9 @@ public class RaceManager2D : MonoBehaviour
     private const string FailSoundName = "fail";
 
     [Header("Race")]
+    [SerializeField] private bool isRaceEnded = false;
     [SerializeField] private int cpuRunnerCount = 4;
-    [SerializeField] private int lapCount = 3;
+    [SerializeField] private int lapCount = 3;//3
     [SerializeField] private float startProgressSpacing = 0.018f;
     [SerializeField] private float laneSpacing = 0.42f;
     [SerializeField] private string playerPrefabResourcesPath = "characters/Player";
@@ -180,13 +183,38 @@ public class RaceManager2D : MonoBehaviour
         RaceItemBox2D box = boxObj.AddComponent<RaceItemBox2D>();
         activeItemBoxes.Add(box);
     }
+    private void CheckFinishedCount()
+    {
+        // 1. นับจำนวนคนที่ IsFinished เป็น true
+        int finishedCount = 0;
+        foreach (var runner in runners)
+        {
+            if (runner != null && runner.IsFinished)
+            {
+                finishedCount++;
+            }
+        }
+
+        // 2. ถ้าครบ 5 คน และยังไม่เคยสั่งจบเกม
+        if (finishedCount >= 5 && !isRaceEnded)
+        {
+            isRaceEnded = true; // ล็อกไว้ไม่ให้เข้ามาทำงานซ้ำ
+
+            Debug.Log("เข้าเส้นชัยครบ 5 คนแล้ว! กำลังทำสิ่งต่อไปนี้...");
+
+            // 3. ใส่สิ่งที่คุณต้องการให้ทำตรงนี้ เช่น:
+            SaveResultsAndLoadScene(); 
+            // หรือเรียกฟังก์ชันจบเกมอื่นๆ
+            StartCoroutine(GotoResult()); // แนะนำให้รอสักครู่ก่อนเปลี่ยนฉาก
+        }
+    }
     private void Update()
     {
-        if (humanRunner == null || runners.Count == 0)
+        if (humanRunner == null || runners.Count == 0 || isRaceEnded)
         {
             return;
         }
-
+        CheckFinishedCount();
         UpdateHazardDrops();
         UpdateHazardHits();
         //UpdateRearHits();
@@ -815,7 +843,7 @@ public class RaceManager2D : MonoBehaviour
         SpriteRenderer hazardRenderer = hazardObject.AddComponent<SpriteRenderer>();
         hazardRenderer.sprite = Resources.Load<Sprite>("Item/Banana");
         hazardRenderer.sortingOrder = 2;
-        hazardObject.transform.localScale = new Vector3(1f, 1f, 1f);
+        hazardObject.transform.localScale = new Vector3(0.2f, 0.2f, 1f);
 
         RaceHazard2D hazard = hazardObject.AddComponent<RaceHazard2D>();
         hazard.Initialize(owner, hazardLifetime, hazardRadius, hazardHeatAmount, hazardHeatMultiplier, hazardHeatDuration);
@@ -882,5 +910,59 @@ public class RaceManager2D : MonoBehaviour
                 return cachedSprite;
             }
         }
+    }
+    public void SaveResultsAndLoadScene()
+    {
+        // 1. เคลียร์กล่องข้อมูลเก่าทิ้งก่อน
+        RaceResultData.FinalResults.Clear();
+
+        // 2. ดึงนักแข่งมาเรียงลำดับ (ก๊อปปี้สูตรเรียงลำดับมาจาก UpdateUi เลย)
+        List<PlayerSplineRunner> orderedRunners = runners
+            .Where(runner => runner != null)
+            .OrderByDescending(runner => runner.IsFinished)
+            .ThenBy(runner => runner.IsFinished ? runner.FinishTime : float.PositiveInfinity)
+            .ThenByDescending(runner => runner.RaceProgress)
+            .ToList();
+
+        // 3. เอาข้อมูลนักแข่งที่เรียงลำดับแล้ว ยัดใส่กล่องลอยฟ้าทีละคน
+        for (int i = 0; i < orderedRunners.Count; i++)
+        {
+            PlayerSplineRunner r = orderedRunners[i];
+
+            RunnerResult result = new RunnerResult();
+            result.Name = r.RunnerName;
+            result.Rank = i + 1; // ลำดับที่ 1, 2, 3...
+            result.FinishTime = r.FinishTime;
+            result.IsHuman = r.IsHuman;
+            Character characterInfo = r.GetComponentInChildren<Character>();
+
+            if (characterInfo != null)
+            {
+                // ถ้ามีสคริปต์ Character ให้จดข้อมูลทรงผม หน้าตา สีผมไว้
+                result.HasCharacter = true;
+                result.HairIndex = characterInfo.CurrentHairIndex;
+                result.FaceIndex = characterInfo.CurrentFaceIndex;
+                result.ClothIndex = characterInfo.CurrentClothIndex;
+                result.HairColor = characterInfo.HairColor;
+            }
+            else
+            {
+                // ถ้าไม่มีสคริปต์ Character (เช่น โหลด Prefab ไม่ติด กลายเป็นกล่องสี่เหลี่ยมสีๆ)
+                result.HasCharacter = false;
+                SpriteRenderer sr = r.GetComponentInChildren<SpriteRenderer>();
+                result.FallbackColor = sr != null ? sr.color : Color.white;
+            }
+            RaceResultData.FinalResults.Add(result);
+        }
+
+        // 4. โหลดหน้าต่างสรุปผล (เปลี่ยนชื่อ "ResultScene" เป็นชื่อ Scene สรุปผลของคุณ)
+        SceneManager.LoadScene("Result");
+    }
+    
+    IEnumerator GotoResult()
+    {
+        // รอ 2 วินาทีเพื่อให้ผู้เล่นเห็นผลลัพธ์บนหน้าจอแข่งก่อน
+        yield return new WaitForSeconds(2f);
+        SaveResultsAndLoadScene();
     }
 }
