@@ -35,19 +35,19 @@ public class PlayerSplineRunner : MonoBehaviour
     [SerializeField] private float joystickAcceleration = 0.08f;
     [SerializeField] private float maxForwardSpeed = 0.05f;
     [SerializeField] private float speedDamping = 0.04f;
-    [SerializeField] private float lateralMoveSpeed = 2.4f;
+    [SerializeField] private float lateralMoveSpeed = 3.4f;
     [SerializeField] private float lateralReturnSpeed = 1.4f;
     [SerializeField] private float lateralTrackPadding = 0.75f;
 
     [Header("OverHeat")]
-    [SerializeField] private float maxOverHeat = 200f;
-    [SerializeField] private float runHeatGain = 20f;
-    [SerializeField] private float passiveCoolRate = 10f;
-    [SerializeField] private float coolDownTapAmount = 40f;
-    [SerializeField] private float overHeatRecoverThreshold = 55f;
+    [SerializeField] private float maxOverHeat = 100f;
+    [SerializeField] private float runHeatGain = 15f;
+    [SerializeField] private float passiveCoolRate = 30f;
+    [SerializeField] private float coolDownTapAmount = 10f;
+    [SerializeField] private float overHeatRecoverThreshold = 25f;
     [SerializeField] private float globalSpeedMultiplier = 0.9f;
     [SerializeField] private float overHeatTopSpeedMultiplier = 0.42f;
-    [SerializeField] private float overHeatAccelerationMultiplier = 0.12f;
+    [SerializeField] private float overHeatAccelerationMultiplier = 0.25f;
     [SerializeField] private float randomHeatBurstChance = 0.82f;
     [SerializeField] private Vector2 randomHeatBurstIntervalRange = new Vector2(1.1f, 2.3f);
     [SerializeField] private Vector2 randomHeatBurstAmountRange = new Vector2(10f, 22f);
@@ -74,12 +74,12 @@ public class PlayerSplineRunner : MonoBehaviour
     private Coroutine colorEffectCoroutine;
 
     [Header("CPU AI")]
-    [SerializeField] private Vector2 aiPumpIntervalRange = new Vector2(0.22f, 0.65f);
-    [SerializeField] private Vector2 aiCoolDownIntervalRange = new Vector2(0.45f, 1.2f);
+    [SerializeField] private Vector2 aiPumpIntervalRange = new Vector2(0.32f, 0.75f);
+    [SerializeField] private Vector2 aiCoolDownIntervalRange = new Vector2(0.85f, 1.2f);
     [SerializeField] private Vector2 aiSteerChangeIntervalRange = new Vector2(0.5f, 1.6f);
-    [SerializeField] private Vector2 aiRestDurationRange = new Vector2(0.5f, 1.4f);
+    [SerializeField] private Vector2 aiRestDurationRange = new Vector2(0.1f, 0.2f);
     [SerializeField] private Vector2 aiDropIntervalRange = new Vector2(2.2f, 4.8f);
-    [SerializeField] private float aiDangerHeatRatio = 0.72f;
+    [SerializeField] private float aiDangerHeatRatio = 0.82f;
     [SerializeField] private float aiEmergencyHeatRatio = 0.92f;
 
     [Header("Race Effects")]
@@ -285,13 +285,18 @@ public class PlayerSplineRunner : MonoBehaviour
     }
     public void PlayerRun()
     {
-        if (!raceActive || isFinished || isOverHeated)
+        //if (!raceActive || isFinished || isOverHeated)
+        //{
+        //    return;
+        //}
+        if (!raceActive || isFinished)
         {
             return;
         }
+        float currentPump = isOverHeated ? (pumpImpulse * overHeatAccelerationMultiplier) : pumpImpulse;
 
         // 1. เพิ่มความเร็ว (ความเร็วเพิ่มได้เสมอ ไม่ว่าจะอมตะหรือไม่)
-        forwardSpeed = Mathf.Min(maxForwardSpeed * speedBoostMultiplier, forwardSpeed + pumpImpulse);
+        forwardSpeed = Mathf.Min(maxForwardSpeed * speedBoostMultiplier, forwardSpeed + currentPump);
 
         // 2. เพิ่มความร้อน (เฉพาะตอนที่บัฟอมตะหมดเวลาแล้วเท่านั้น)
         if (Time.time > heatImmunityEndTime)

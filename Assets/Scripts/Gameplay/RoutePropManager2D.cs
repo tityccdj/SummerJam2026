@@ -100,11 +100,11 @@ public class RoutePropManager2D : MonoBehaviour
     [SerializeField] private int maxPropIndex = 6;
 
     [Header("Placement")]
-    [SerializeField] private int targetPropCount = 24;
+    [SerializeField] private int targetPropCount = 15;
     [SerializeField] private float minSplineClearance = 0.95f;
     [SerializeField] private float maxSplineClearance = 2.55f;
-    [SerializeField] private float minPropSpacing = 1.15f;
-    [SerializeField] private float propWorldScale = 1f;
+    [SerializeField] private float minPropSpacing = 1.50f;
+    [SerializeField] private float propWorldScale = 0.35f;
 
     [Header("Viewport")]
     [SerializeField] private float viewportPadding = 4f;

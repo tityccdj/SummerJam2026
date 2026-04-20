@@ -1,13 +1,16 @@
 fileFormatVersion: 2
-guid: 7ee781109a27f8a4f9916f549d742d11
+guid: 8c6d2a92d251b054ba44ebe595ed9b8e
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: -3289453322174803879
-    second: soda_0
+      213: 6388389237426139460
+    second: can_0
   - first:
-      213: 5121632826857699671
-    second: soda_1
+      213: -6519498243889234145
+    second: can_1
+  - first:
+      213: -5155920690208103013
+    second: can_2
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -100,19 +103,6 @@ TextureImporter:
     androidETC2FallbackOverride: 0
     forceMaximumCompressionQuality_BC6H_BC7: 0
   - serializedVersion: 4
-    buildTarget: Android
-    maxTextureSize: 2048
-    resizeAlgorithm: 0
-    textureFormat: -1
-    textureCompression: 1
-    compressionQuality: 50
-    crunchedCompression: 0
-    allowsAlphaSplitting: 0
-    overridden: 0
-    ignorePlatformSupport: 0
-    androidETC2FallbackOverride: 0
-    forceMaximumCompressionQuality_BC6H_BC7: 0
-  - serializedVersion: 4
     buildTarget: WebGL
     maxTextureSize: 2048
     resizeAlgorithm: 0
@@ -129,13 +119,13 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: soda_0
+      name: can_0
       rect:
         serializedVersion: 2
-        x: 46
-        y: 19
-        width: 114
-        height: 161
+        x: 260
+        y: 251
+        width: 656
+        height: 1186
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -144,20 +134,20 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: 950da8ab1a38952d0800000000000000
-      internalID: -3289453322174803879
+      spriteID: 441b6bf0a2e18a850800000000000000
+      internalID: 6388389237426139460
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: soda_1
+      name: can_1
       rect:
         serializedVersion: 2
-        x: 111
-        y: 169
-        width: 15
-        height: 15
+        x: 591
+        y: 1392
+        width: 69
+        height: 68
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -166,8 +156,30 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: 75935d2abe1b31740800000000000000
-      internalID: 5121632826857699671
+      spriteID: f1ff23393e61685a0800000000000000
+      internalID: -6519498243889234145
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: can_2
+      rect:
+        serializedVersion: 2
+        x: 1120
+        y: 1005
+        width: 10
+        height: 11
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: b952f02137d7278b0800000000000000
+      internalID: -5155920690208103013
       vertices: []
       indices: 
       edges: []
@@ -186,8 +198,9 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      soda_0: -3289453322174803879
-      soda_1: 5121632826857699671
+      can_0: 6388389237426139460
+      can_1: -6519498243889234145
+      can_2: -5155920690208103013
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 
