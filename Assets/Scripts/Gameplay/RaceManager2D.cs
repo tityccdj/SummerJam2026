@@ -10,6 +10,7 @@ using static RaceResult;
 [DisallowMultipleComponent]
 public class RaceManager2D : MonoBehaviour
 {
+    public TextMeshProUGUI New_Laptext;
     private const string CountSoundName = "count";
     private const string RaceSoundName = "race";
     private const string FailSoundName = "fail";
@@ -90,6 +91,7 @@ public class RaceManager2D : MonoBehaviour
         ClearObstacles();
         uiCanvas = canvas != null ? canvas : GameObject.Find("Canvas").GetComponent<Canvas>();
         cameraFollow = Camera.main != null ? Camera.main.GetComponent<CameraFollow2D>() : null;
+        New_Laptext = GameObject.Find("round").GetComponent<TextMeshProUGUI>();
 
         RouteData route = routesRenderer.GetRouteData();
         float trackWidth = route != null ? route.trackWidth : 2.5f;
@@ -390,7 +392,7 @@ public class RaceManager2D : MonoBehaviour
             {
                 shownLap = lapCount;
             }
-
+            New_Laptext.text=$"Lap {shownLap} / {lapCount}";
             lapText.text = $"Lap {shownLap}/{lapCount}";
         }
     }

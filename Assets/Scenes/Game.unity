@@ -545,11 +545,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6895622927116658304, guid: bb0d57ced337dc64cbf5b73e78c904db, type: 3}
       propertyPath: m_AnchoredPosition.x
-      value: -190.4
+      value: -1001
       objectReference: {fileID: 0}
     - target: {fileID: 6895622927116658304, guid: bb0d57ced337dc64cbf5b73e78c904db, type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: -85.6
+      value: -51
       objectReference: {fileID: 0}
     - target: {fileID: 6895622927116658304, guid: bb0d57ced337dc64cbf5b73e78c904db, type: 3}
       propertyPath: m_LocalEulerAnglesHint.x
@@ -1544,7 +1544,7 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 1985924114363413429, guid: b403871d489209d4680bcb1c03af4972, type: 3}
       propertyPath: m_Name
-      value: Text (Round)
+      value: round
       objectReference: {fileID: 0}
     - target: {fileID: 3153355102525573974, guid: b403871d489209d4680bcb1c03af4972, type: 3}
       propertyPath: m_Pivot.x
@@ -1636,6 +1636,22 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 3153355102525573974, guid: b403871d489209d4680bcb1c03af4972, type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4362192141612358424, guid: b403871d489209d4680bcb1c03af4972, type: 3}
+      propertyPath: m_text
+      value: 'Lap '
+      objectReference: {fileID: 0}
+    - target: {fileID: 4362192141612358424, guid: b403871d489209d4680bcb1c03af4972, type: 3}
+      propertyPath: m_fontAsset
+      value: 
+      objectReference: {fileID: 11400000, guid: a1b55fe927677204ea6fa3fa15a9f7b5, type: 2}
+    - target: {fileID: 4362192141612358424, guid: b403871d489209d4680bcb1c03af4972, type: 3}
+      propertyPath: m_sharedMaterial
+      value: 
+      objectReference: {fileID: -614230727397480659, guid: a1b55fe927677204ea6fa3fa15a9f7b5, type: 2}
+    - target: {fileID: 4362192141612358424, guid: b403871d489209d4680bcb1c03af4972, type: 3}
+      propertyPath: m_hasFontAssetChanged
       value: 0
       objectReference: {fileID: 0}
     m_RemovedComponents: []

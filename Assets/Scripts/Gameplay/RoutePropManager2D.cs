@@ -10,7 +10,7 @@ public class RoutePropManager2D : MonoBehaviour
         public SpriteRenderer[] Renderers;
         public Color[] BaseColors;
         public Vector2 Position;
-        public float CurrentAlpha = 1f;
+        public float CurrentAlpha = 0.5f;
         public bool Visible;
 
         public Bounds WorldBounds
@@ -101,8 +101,8 @@ public class RoutePropManager2D : MonoBehaviour
 
     [Header("Placement")]
     [SerializeField] private int targetPropCount = 15;
-    [SerializeField] private float minSplineClearance = 0.95f;
-    [SerializeField] private float maxSplineClearance = 2.55f;
+    [SerializeField] private float minSplineClearance = 3f;
+    [SerializeField] private float maxSplineClearance = 6f;
     [SerializeField] private float minPropSpacing = 1.50f;
     [SerializeField] private float propWorldScale = 0.35f;
 
