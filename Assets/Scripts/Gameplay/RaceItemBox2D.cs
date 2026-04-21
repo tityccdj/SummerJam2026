@@ -6,7 +6,8 @@ public enum RaceItemType
     None,
     Soda,   // วิ่งเร็วขึ้น
     Banana, // วางกับดัก (Overheat)
-    Ice     // น้ำแข็ง ล้างความร้อน
+    Ice,     // น้ำแข็ง ล้างความร้อน
+    Sun,Gun,Weight
 }
 
 public class RaceItemBox2D : MonoBehaviour
@@ -30,8 +31,9 @@ public class RaceItemBox2D : MonoBehaviour
         if (!isAvailable) return;
 
         // สุ่มไอเทม 1 ถึง 3 (1=Soda, 2=Banana, 3=Ice)
-        RaceItemType randomItem = (RaceItemType)Random.Range(1, 4);
-        
+        int itemTotal = System.Enum.GetValues(typeof(RaceItemType)).Length;
+        RaceItemType randomItem = (RaceItemType)Random.Range(1, itemTotal);
+
         // ลองส่งไอเทมให้คนเล่น ถ้าเขามือว่าง (ReceiveItem คืนค่า true) กล่องถึงจะหายไป
         if (runner.ReceiveItem(randomItem))
         {

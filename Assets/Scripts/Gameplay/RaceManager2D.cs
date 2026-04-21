@@ -135,7 +135,7 @@ public class RaceManager2D : MonoBehaviour
 
         // �ҧ 3 �� ���������ʹ�� 25%, 50% ��� 75%
         float[] progressPoints = { 0.25f, 0.50f, 0.75f };
-        int boxesPerRow = 3; // ���� 3 ���ͧ
+        int boxesPerRow = 5; // ���� 3 ���ͧ
 
         foreach (float progress in progressPoints)
         {

@@ -1,5 +1,6 @@
 ﻿using UnityEngine;
 using UnityEngine.UI;
+using System.Linq; // จำเป็นสำหรับการจัดอันดับหาคนนำหน้า
 
 [DisallowMultipleComponent]
 public class PlayerSplineRunner : MonoBehaviour
@@ -67,11 +68,15 @@ public class PlayerSplineRunner : MonoBehaviour
     [SerializeField] private KeyCode downKey = KeyCode.S;
     [SerializeField] private KeyCode altLeftKey = KeyCode.LeftArrow;
     [SerializeField] private KeyCode altRightKey = KeyCode.RightArrow;
+
     [Header("Inventory")]
     public RaceItemType currentItem = RaceItemType.None;
     private float heatImmunityEndTime = 0f;
     private float speedDampingMultiplier = 1f;
     private Coroutine colorEffectCoroutine;
+
+    // 🌟 ตัวแปรเก็บเวลาสถานะขัดขวางการลดความร้อน
+    private float coolDownDebuffEndTime = 0f;
 
     [Header("CPU AI")]
     [SerializeField] private Vector2 aiPumpIntervalRange = new Vector2(0.32f, 0.75f);
@@ -139,26 +144,24 @@ public class PlayerSplineRunner : MonoBehaviour
     public bool CanReceiveRearHit => rearHitImmunityTimer <= 0f && !isFinished;
     public event System.Action<PlayerSplineRunner> LapCompleted;
     public event System.Action<PlayerSplineRunner> RaceFinished;
+
     private void UpdateItemUI()
     {
-        // ถ้าไม่ใช่คนเล่น หรือไม่ได้ใส่ช่อง UI ไว้ ให้ข้ามไปเลย (AI ไม่ต้องมี UI)
         if (!isHuman || itemUIImage == null) return;
 
         if (currentItem == RaceItemType.None)
         {
-            // ถ้ามือว่าง ให้ซ่อนรูปไอเทม
             itemUIImage.enabled = false;
             itemUIImage.sprite = null;
         }
         else
         {
-            // ถ้ามีของ ให้โหลดภาพจากโฟลเดอร์ Resources/Item/ ตามชื่อไอเทม
             Sprite loadedSprite = Resources.Load<Sprite>($"Item/{currentItem.ToString()}");
 
             if (loadedSprite != null)
             {
                 itemUIImage.sprite = loadedSprite;
-                itemUIImage.enabled = true; // เปิดการแสดงผล
+                itemUIImage.enabled = true;
             }
             else
             {
@@ -166,10 +169,12 @@ public class PlayerSplineRunner : MonoBehaviour
             }
         }
     }
+
     public void SetItemUI(Image uiImage)
     {
         itemUIImage = uiImage;
     }
+
     public void BindSceneReferences(RoutesRenderer renderer, Joystick movementJoystick, Slider heatSlider)
     {
         routesRenderer = renderer;
@@ -231,19 +236,20 @@ public class PlayerSplineRunner : MonoBehaviour
             StopHumanGaspLoop();
         }
     }
+
     public bool ReceiveItem(RaceItemType newItem)
     {
         if (currentItem != RaceItemType.None)
         {
-            return false; // มีของอยู่แล้ว เก็บไม่ได้
+            return false;
         }
 
         currentItem = newItem;
         UpdateItemUI();
         Debug.Log($"<color=cyan> [{RunnerName}] </color> เก็บไอเทมได้: <color=yellow> {newItem} </color>");
-        // AudioManager.Instance?.PlaySFXOneShot("item_box_pickup"); // ถ้ามีเสียงค่อยเปิดคอมเมนต์
         return true;
     }
+
     public void UseItem()
     {
         if (currentItem == RaceItemType.None) return;
@@ -252,20 +258,21 @@ public class PlayerSplineRunner : MonoBehaviour
         {
             StopCoroutine(colorEffectCoroutine);
         }
+
+        PlayerSplineRunner targetAhead = GetTargetAhead();
+
         switch (currentItem)
         {
             case RaceItemType.Soda:
                 ApplySpeedBoost(1.5f, 2f);
                 heatImmunityEndTime = Time.time + 2f;
                 speedDampingMultiplier = 0.5f;
-                // โซดา: ตัวเรืองแสงสีเหลืองทอง 3 วินาที (ให้เท่ากับเวลาบัฟสปีด)
                 colorEffectCoroutine = StartCoroutine(ItemColorEffect(new Color(1f, 0.8f, 0.2f), 3f));
                 Debug.Log($"<color=lime> [{RunnerName}] </color> กดใช้: <color=orange> Soda  </color>");
                 break;
 
             case RaceItemType.Banana:
                 QueueHazardDrop();
-                // กล้วย: ตัวกระพริบเป็นสีเขียวตองอ่อน 1 วินาที
                 colorEffectCoroutine = StartCoroutine(ItemColorEffect(Color.green, 1f));
                 Debug.Log($"<color=lime> [{RunnerName}] </color> กดใช้: <color=yellow> Banana  </color>");
                 break;
@@ -273,32 +280,125 @@ public class PlayerSplineRunner : MonoBehaviour
             case RaceItemType.Ice:
                 ResetHeat();
                 heatImmunityEndTime = Time.time + 3f;
-               
                 colorEffectCoroutine = StartCoroutine(ItemColorEffect(Color.cyan, 3f));
                 Debug.Log($"<color=lime> [{RunnerName}] </color> กดใช้: <color=cyan> Ice  </color>");
                 break;
+
+            // 🌟 1. Sun ไอเทม 
+            case RaceItemType.Sun:
+                if (targetAhead != null)
+                {
+                    targetAhead.ApplySunDebuff();
+                    Debug.Log($"<color=lime> [{RunnerName}] </color> ยิง Sun ใส่: <color=red> {targetAhead.RunnerName} </color>");
+                }
+                break;
+
+            // 🌟 2. Gun ไอเทม
+            case RaceItemType.Gun:
+                FireGunProjectile();
+                Debug.Log($"<color=lime> [{RunnerName}] </color> ยิง: <color=gray> Gun </color>");
+                break;
+
+            // 🌟 3. ลด Max Speed ของคนนำหน้า (สมมติให้ใช้ชื่อ Weight)
+            case RaceItemType.Weight:
+                if (targetAhead != null)
+                {
+                    targetAhead.ApplySpeedBoost(0.8f, 3f); // วิ่งได้แค่ 80% เป็นเวลา 3 วินาที
+                    targetAhead.colorEffectCoroutine = targetAhead.StartCoroutine(targetAhead.ItemColorEffect(Color.magenta, 3f));
+                    Debug.Log($"<color=lime> [{RunnerName}] </color> ลดสปีดใส่: <color=magenta> {targetAhead.RunnerName} </color>");
+                }
+                break;
         }
 
-        // ใช้เสร็จแล้ว เคลียร์มือให้ว่าง
         currentItem = RaceItemType.None;
         UpdateItemUI();
     }
+
+    // ฟังก์ชันค้นหาคนนำหน้าเรา 1 ลำดับ
+    private PlayerSplineRunner GetTargetAhead()
+    {
+        var allRunners = FindObjectsByType<PlayerSplineRunner>(FindObjectsSortMode.None)
+            .Where(r => r != null)
+            .OrderByDescending(r => r.IsFinished)
+            .ThenBy(r => r.IsFinished ? r.FinishTime : float.PositiveInfinity)
+            .ThenByDescending(r => r.RaceProgress)
+            .ToList();
+
+        int myIndex = allRunners.IndexOf(this);
+        if (myIndex > 0)
+        {
+            return allRunners[myIndex - 1]; // คืนค่าคนที่อยู่ลำดับเหนือกว่าเรา 1 อันดับ
+        }
+        return null; // เรานำเป็นที่ 1 อยู่แล้ว ไม่มีเป้าหมาย
+    }
+
+    // ฟังก์ชันเสกกระสุนปืน
+    private void FireGunProjectile()
+    {
+
+        GameObject bullet = new GameObject("GunBullet");
+        bullet.transform.position = transform.position;
+
+        SpriteRenderer sr = bullet.AddComponent<SpriteRenderer>();
+
+        // ลองพยายามโหลดภาพกระสุนดูก่อน
+        Sprite bulletSprite = Resources.Load<Sprite>("Item/Bullet");
+
+        if (bulletSprite != null)
+        {
+            sr.sprite = bulletSprite;
+            sr.color = Color.white;
+        }
+        else
+        {
+            // ถ้าโหลดรูปไม่ติด ให้สร้างสี่เหลี่ยมสีแดงขึ้นมาแทนชั่วคราว!
+            Texture2D tex = new Texture2D(1, 1);
+            tex.SetPixel(0, 0, Color.white);
+            tex.Apply();
+
+            sr.sprite = Sprite.Create(tex, new Rect(0, 0, 1, 1), new Vector2(0.5f, 0.5f), 100f);
+            sr.color = Color.red;
+        }
+
+        sr.sortingOrder = 50;
+        bullet.transform.localScale = new Vector3(100f, 100f, 1f);
+
+        GunBullet logic = bullet.AddComponent<GunBullet>();
+
+        // 🌟 1. ดึงข้อมูลว่าใครคือคนที่อยู่ข้างหน้าเรา
+        PlayerSplineRunner targetAhead = GetTargetAhead();
+
+        // 🌟 2. ทิศทางสำรอง (กรณีเราเป็นที่ 1 ไม่มีเป้าให้ตาม ก็ให้ยิงตรงไปข้างหน้าแทน)
+        Vector2 fallbackDirection = currentRouteTangent.sqrMagnitude > 0.001f ? currentRouteTangent.normalized : Vector2.right;
+        if (currentFacingTangentX < 0)
+        {
+            fallbackDirection = -fallbackDirection;
+        }
+
+        // 🌟 3. ส่งข้อมูลเป้าหมาย (targetAhead) ไปให้กระสุนด้วย
+        logic.Initialize(this, targetAhead, fallbackDirection, 20);
+    }
+
+    // ฟังก์ชันรับสถานะโดนพระอาทิตย์เผา
+    public void ApplySunDebuff()
+    {
+        TriggerInstantOverheat();
+        coolDownDebuffEndTime = Time.time + 1f; // ลดคูลดาวน์ช้าลง 1 วินาที
+
+        if (colorEffectCoroutine != null) StopCoroutine(colorEffectCoroutine);
+        colorEffectCoroutine = StartCoroutine(ItemColorEffect(new Color(1f, 0.5f, 0f), 1f)); // ตัวเป็นสีส้มแดง
+    }
+
     public void PlayerRun()
     {
-        //if (!raceActive || isFinished || isOverHeated)
-        //{
-        //    return;
-        //}
         if (!raceActive || isFinished)
         {
             return;
         }
-        float currentPump = isOverHeated ? (pumpImpulse * overHeatAccelerationMultiplier) : pumpImpulse;
 
-        // 1. เพิ่มความเร็ว (ความเร็วเพิ่มได้เสมอ ไม่ว่าจะอมตะหรือไม่)
+        float currentPump = isOverHeated ? (pumpImpulse * overHeatAccelerationMultiplier) : pumpImpulse;
         forwardSpeed = Mathf.Min(maxForwardSpeed * speedBoostMultiplier, forwardSpeed + currentPump);
 
-        // 2. เพิ่มความร้อน (เฉพาะตอนที่บัฟอมตะหมดเวลาแล้วเท่านั้น)
         if (Time.time > heatImmunityEndTime)
         {
             currentOverHeat = Mathf.Clamp(currentOverHeat + (runHeatGain * currentHeatMultiplier), 0f, maxOverHeat);
@@ -325,7 +425,9 @@ public class PlayerSplineRunner : MonoBehaviour
             return;
         }
 
-        currentOverHeat = Mathf.Max(0f, currentOverHeat - coolDownTapAmount);
+        // 🌟 ลดความร้อนได้ช้าลงครึ่งนึง (0.5) ถ้าติดสถานะ Sun
+        float tapAmount = (Time.time < coolDownDebuffEndTime) ? coolDownTapAmount * 0.5f : coolDownTapAmount;
+        currentOverHeat = Mathf.Max(0f, currentOverHeat - tapAmount);
 
         if (isOverHeated && currentOverHeat <= overHeatRecoverThreshold)
         {
@@ -375,14 +477,6 @@ public class PlayerSplineRunner : MonoBehaviour
         RefreshHumanOverheatAudio();
         SyncSlider();
     }
-
-    //public void ApplyRearHitEffect(float speedBoostAmount, float duration, float heatMultiplier, float extraHeat)
-    //{
-    //    forwardSpeed = Mathf.Min(maxForwardSpeed * 1.45f, forwardSpeed + speedBoostAmount);
-    //    TriggerCollisionAnimation(duration);
-    //    ApplyExternalHeat(extraHeat, heatMultiplier, duration);
-    //    rearHitImmunityTimer = Mathf.Max(rearHitImmunityTimer, duration * 0.5f);
-    //}
 
     public void ResetHeat()
     {
@@ -460,8 +554,11 @@ public class PlayerSplineRunner : MonoBehaviour
     {
         if (currentOverHeat > 0f)
         {
-            currentOverHeat = Mathf.Max(0f, currentOverHeat - passiveCoolRate * Time.deltaTime);
+            // 🌟 การระบายความร้อนอัตโนมัติก็ช้าลงครึ่งนึงด้วย ถ้าติดสถานะ Sun
+            float currentPassiveCool = (Time.time < coolDownDebuffEndTime) ? passiveCoolRate * 0.5f : passiveCoolRate;
+            currentOverHeat = Mathf.Max(0f, currentOverHeat - currentPassiveCool * Time.deltaTime);
         }
+
         if (Time.time >= speedBoostEndTime)
         {
             speedBoostMultiplier = 1f;
@@ -492,19 +589,6 @@ public class PlayerSplineRunner : MonoBehaviour
             hazardDropTimer -= Time.deltaTime;
         }
 
-        //randomHeatTimer += Time.deltaTime;
-        //if (!isFinished && randomHeatTimer >= randomHeatCooldown)
-        //{
-        //    randomHeatTimer = 0f;
-        //    randomHeatCooldown = GetNextRandomHeatCooldown();
-
-        //    if (Random.value <= randomHeatBurstChance)
-        //    {
-        //        float extraHeat = Random.Range(randomHeatBurstAmountRange.x, randomHeatBurstAmountRange.y);
-        //        ApplyExternalHeat(extraHeat, 1f, 0f);
-        //    }
-        //}
-
         if (isOverHeated && currentOverHeat <= overHeatRecoverThreshold)
         {
             isOverHeated = false;
@@ -515,51 +599,6 @@ public class PlayerSplineRunner : MonoBehaviour
 
     private void UpdateMovement(RouteData route)
     {
-        //float forwardInput = isHuman ? GetHumanForwardInput() : GetCpuForwardInput();
-        //float horizontalInput = isHuman ? GetHumanHorizontalInput() : GetCpuHorizontalInput();
-        //float accelerationScale = isOverHeated ? overHeatAccelerationMultiplier : 1f;
-        //float targetTopSpeed = maxForwardSpeed * globalSpeedMultiplier * (isOverHeated ? overHeatTopSpeedMultiplier : 1f) * speedBoostMultiplier;
-        //float reverseSpeedLimit = maxForwardSpeed * globalSpeedMultiplier * 0.2f;
-        //float sprintCap = targetTopSpeed * 1.45f;
-
-        //forwardSpeed += forwardInput * joystickAcceleration * accelerationScale * Time.deltaTime;
-        //forwardSpeed = Mathf.Clamp(forwardSpeed, -reverseSpeedLimit, sprintCap);
-        //forwardSpeed = Mathf.MoveTowards(forwardSpeed, 0f, speedDamping * speedDampingMultiplier * Time.deltaTime);
-        //if (forwardSpeed > targetTopSpeed)
-        //{
-        //    forwardSpeed = Mathf.MoveTowards(forwardSpeed, targetTopSpeed, speedDamping * 1.8f * Time.deltaTime);
-        //}
-
-        //float previousProgress = progress;
-        //progress = route.closed
-        //    ? Mathf.Repeat(progress + forwardSpeed * Time.deltaTime, 1f)
-        //    : Mathf.Clamp01(progress + forwardSpeed * Time.deltaTime);
-
-        //float offsetLimit = Mathf.Max(0.15f, route.trackWidth * lateralTrackPadding * 0.5f);
-        //float signedHorizontalInput = ResolveScreenConsistentHorizontal(horizontalInput, route);
-        //if (Mathf.Abs(signedHorizontalInput) > 0.01f)
-        //{
-        //    lateralOffset += signedHorizontalInput * lateralMoveSpeed * Time.deltaTime;
-        //}
-
-        //lateralOffset = Mathf.Clamp(lateralOffset, -offsetLimit, offsetLimit);
-
-        //Vector2 routePosition = route.EvaluatePosition(progress);
-        //Vector2 routeNormal = route.EvaluateNormal(progress);
-        //Vector2 routeTangent = route.EvaluateTangent(progress);
-        //currentRouteTangent = routeTangent.sqrMagnitude > 0.001f ? routeTangent.normalized : Vector2.right;
-        //currentFacingTangentX = currentRouteTangent.x;
-        //Vector2 finalPosition = routePosition + routeNormal * lateralOffset;
-
-        //transform.position = new Vector3(finalPosition.x, finalPosition.y, transform.position.z);
-        //transform.rotation = Quaternion.identity;
-
-        //if (!hasProgressSample)
-        //{
-        //    lastProgressSample = previousProgress;
-        //    hasProgressSample = true;
-        //}
-        // 1. คำนวณความเร็ว (ดึงค่า GetHumanForwardInput ซึ่งตอนนี้คือ 0 รถจะวิ่งจากแรง Pump เท่านั้น)
         float forwardInput = isHuman ? GetHumanForwardInput() : GetCpuForwardInput();
         float accelerationScale = isOverHeated ? overHeatAccelerationMultiplier : 1f;
         float targetTopSpeed = maxForwardSpeed * globalSpeedMultiplier * (isOverHeated ? overHeatTopSpeedMultiplier : 1f) * speedBoostMultiplier;
@@ -579,21 +618,17 @@ public class PlayerSplineRunner : MonoBehaviour
             ? Mathf.Repeat(progress + forwardSpeed * Time.deltaTime, 1f)
             : Mathf.Clamp01(progress + forwardSpeed * Time.deltaTime);
 
-        // 🌟 2. คำนวณข้อมูลถนน ณ ตำแหน่งปัจจุบัน
         Vector2 routePosition = route.EvaluatePosition(progress);
         Vector2 routeNormal = route.EvaluateNormal(progress);
         Vector2 routeTangent = route.EvaluateTangent(progress);
 
-        // 🌟 3. คำนวณการบังคับเลี้ยว (โยกเลน)
         float lateralInput = 0f;
         if (isHuman)
         {
-            // คนเล่น: ใช้ระบบใหม่ที่ฉลาดขึ้น (อิงหน้าจอ + แนวถนน)
             lateralInput = GetHumanLateralInput(routeNormal);
         }
         else
         {
-            // AI: ใช้ระบบเดิม
             lateralInput = ResolveScreenConsistentHorizontal(GetCpuHorizontalInput(), route);
         }
 
@@ -605,7 +640,6 @@ public class PlayerSplineRunner : MonoBehaviour
 
         lateralOffset = Mathf.Clamp(lateralOffset, -offsetLimit, offsetLimit);
 
-        // 4. อัปเดตตำแหน่งและทิศทางหันหน้าลงใน Scene
         currentRouteTangent = routeTangent.sqrMagnitude > 0.001f ? routeTangent.normalized : Vector2.right;
         currentFacingTangentX = currentRouteTangent.x;
         Vector2 finalPosition = routePosition + routeNormal * lateralOffset;
@@ -658,78 +692,52 @@ public class PlayerSplineRunner : MonoBehaviour
         }
     }
 
-    //private float GetHumanForwardInput()
-    //{
-    //    return joystick != null ? joystick.Vertical : 0f;
-    //}
     private float GetHumanForwardInput()
     {
         return 0f;
     }
+
     private float GetHumanLateralInput(Vector2 routeNormal)
     {
         Vector2 inputDir = Vector2.zero;
 
-        // รับค่าปุ่มกดทิศทาง 4 ทิศ (W A S D หรือ ลูกศร)
         if (Input.GetKey(KeyCode.W) || Input.GetKey(KeyCode.UpArrow)) { inputDir.y += 1f; }
         if (Input.GetKey(KeyCode.S) || Input.GetKey(KeyCode.DownArrow)) { inputDir.y -= 1f; }
         if (Input.GetKey(KeyCode.D) || Input.GetKey(KeyCode.RightArrow)) { inputDir.x += 1f; }
         if (Input.GetKey(KeyCode.A) || Input.GetKey(KeyCode.LeftArrow)) { inputDir.x -= 1f; }
 
-        // รับค่าจาก Joystick (ดันได้ทุกทิศทาง)
         if (joystick != null)
         {
             inputDir.x += joystick.Horizontal;
             inputDir.y += joystick.Vertical;
         }
 
-        // จำกัดความยาวเวกเตอร์ไม่ให้เกิน 1 (กันกดเฉียงแล้วพุ่งเร็วกว่าปกติ)
         if (inputDir.sqrMagnitude > 1f)
         {
             inputDir.Normalize();
         }
 
-        // 🌟 หัวใจสำคัญ: นำทิศทางที่กด (หน้าจอ) ไปทาบกับ ทิศทางขวางของถนน (Normal)
-        // ถ้าถนนเป็นแนวตั้ง กด A/D รถจะเลี้ยว / ถ้าถนนเป็นแนวนอน กด W/S รถจะเลี้ยวอัตโนมัติ!
         return Vector2.Dot(inputDir, routeNormal);
     }
 
-    //private float GetHumanHorizontalInput()
-    //{
-    //    float keyboardHorizontal = 0f;
-
-    //    if (Input.GetKey(leftKey) || Input.GetKey(altLeftKey))
-    //    {
-    //        keyboardHorizontal -= 1f;
-    //    }
-
-    //    if (Input.GetKey(rightKey) || Input.GetKey(altRightKey))
-    //    {
-    //        keyboardHorizontal += 1f;
-    //    }
-
-    //    float joystickHorizontal = joystick != null ? joystick.Horizontal : 0f;
-    //    return Mathf.Clamp(keyboardHorizontal + joystickHorizontal, -1f, 1f);
-    //}
-
     private void HandleHumanActionInput()
     {
-        if (Input.GetKeyDown(runKey)||Input.GetKeyDown(altRunKey))
+        if (Input.GetKeyDown(runKey) || Input.GetKeyDown(altRunKey))
         {
             PlayerRun();
         }
 
-        if (Input.GetKeyDown(coolDownKey)||Input.GetKeyDown(altCoolDownKey))
+        if (Input.GetKeyDown(coolDownKey) || Input.GetKeyDown(altCoolDownKey))
         {
             CoolDown();
         }
 
-        if (Input.GetKeyDown(useItemKey)||Input.GetKeyDown(altUseItemKey))
+        if (Input.GetKeyDown(useItemKey) || Input.GetKeyDown(altUseItemKey))
         {
-            //QueueHazardDrop();
             UseItem();
         }
     }
+
     private float GetCpuForwardInput()
     {
         aiPumpTimer += Time.deltaTime;
@@ -799,7 +807,6 @@ public class PlayerSplineRunner : MonoBehaviour
 
         if (currentOverHeat < maxOverHeat * 0.88f)
         {
-            //QueueHazardDrop();
             UseItem();
         }
     }
@@ -948,7 +955,6 @@ public class PlayerSplineRunner : MonoBehaviour
             return;
         }
 
-
         string targetState = IdleAnimationStateName;
         if (collisionAnimationTimer > 0f || isOverHeated)
         {
@@ -984,28 +990,86 @@ public class PlayerSplineRunner : MonoBehaviour
             character.SetFlipX(!defaultSpriteFlipX);
         }
     }
-    private System.Collections.IEnumerator ItemColorEffect(Color effectColor, float duration)
+
+    public System.Collections.IEnumerator ItemColorEffect(Color effectColor, float duration)
     {
-        // 1. ดึง Component การวาดภาพทั้งหมดในตัวละคร (รวมถึง AI ด้วย)
         SpriteRenderer[] renderers = GetComponentsInChildren<SpriteRenderer>();
         Color[] originalColors = new Color[renderers.Length];
 
-        // 2. จำสีเดิมของแต่ละชิ้นส่วน และเปลี่ยนเป็นสีไอเทม
         for (int i = 0; i < renderers.Length; i++)
         {
             originalColors[i] = renderers[i].color;
             renderers[i].color = effectColor;
         }
 
-        // 3. รอเวลาตามที่กำหนด (ชั่วคราว)
         yield return new WaitForSeconds(duration);
 
-        // 4. คืนค่าสีเดิมให้ตัวละคร
         for (int i = 0; i < renderers.Length; i++)
         {
             if (renderers[i] != null)
             {
                 renderers[i].color = originalColors[i];
+            }
+        }
+    }
+}
+
+// 🌟 ระบบกระสุนปืน ยิงเป็นเส้นตรง
+public class GunBullet : MonoBehaviour
+{
+
+    public PlayerSplineRunner owner;
+    public PlayerSplineRunner target; // เก็บเป้าหมายที่ต้องวิ่งตาม
+    public Vector2 fallbackDirection; // ทิศทางสำรองถ้าไม่มีเป้าหมาย
+    public float speed;
+    private float lifeTimer = 2.5f; // เพิ่มเวลาให้อยู่นานขึ้นหน่อย เพราะวิ่งตามเลี้ยวไปมาอาจใช้เวลา
+
+    // เปลี่ยน Initialize ให้รับเป้าหมาย (target) มาด้วย
+    public void Initialize(PlayerSplineRunner owner, PlayerSplineRunner target, Vector2 fallbackDir, float spd)
+    {
+        this.owner = owner;
+        this.target = target;
+        this.fallbackDirection = fallbackDir.normalized;
+        this.speed = spd;
+    }
+
+    void Update()
+    {
+        lifeTimer -= Time.deltaTime;
+        if (lifeTimer <= 0)
+        {
+            Destroy(gameObject);
+            return;
+        }
+
+        Vector3 moveDirection;
+
+        // 🌟 ระบบวิ่งตามเป้าหมาย (Homing)
+        if (target != null && !target.IsFinished)
+        {
+            // คำนวณหาทิศทางจากกระสุน พุ่งไปหาตำแหน่งของเป้าหมาย
+            moveDirection = (target.transform.position - transform.position).normalized;
+        }
+        else
+        {
+            // ถ้าเป้าหมายไม่มี (เราเป็นที่ 1) หรือเป้าหมายเข้าเส้นชัยไปแล้ว ให้วิ่งตรงๆ ไปตามทาง
+            moveDirection = fallbackDirection;
+        }
+
+        // เคลื่อนที่ไปตามทิศทางที่คำนวณไว้
+        transform.position += moveDirection * speed * Time.deltaTime;
+
+        // ตรวจสอบการชนกับนักแข่งคนอื่นๆ
+        foreach (var runner in FindObjectsByType<PlayerSplineRunner>(FindObjectsSortMode.None))
+        {
+            if (runner == owner || runner.IsFinished) continue;
+
+            // ถ้าระยะห่างน้อยกว่า 0.8 หน่วย ถือว่าโดน
+            if (Vector2.Distance(transform.position, runner.transform.position) < 0.8f)
+            {
+                runner.TriggerInstantOverheat();
+                Destroy(gameObject); // ชนแล้วกระสุนหายไป
+                return;
             }
         }
     }
