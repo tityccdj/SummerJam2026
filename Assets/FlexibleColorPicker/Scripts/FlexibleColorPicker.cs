@@ -200,6 +200,7 @@ public class FlexibleColorPicker : MonoBehaviour {
     /// </summary>
     public void SetColor(Color color) {
         this.color = color;
+        this.startingColor = color;
     }
 
     /// <summary>

@@ -38,6 +38,7 @@ public class UICharacter : MonoBehaviour
     private Button hairColorBtn;
     [SerializeField]
     private FlexibleColorPicker hairColor;
+    private Color currentHairColor;
 
     public void Setup(Param param)
     {
@@ -49,8 +50,16 @@ public class UICharacter : MonoBehaviour
         prevFaceBtn.onClick.AddListener(() => param.onPrevFace?.Invoke());
         nextClothBtn.onClick.AddListener(() => param.onNextCloth?.Invoke());
         prevClothBtn.onClick.AddListener(() => param.onPrevCloth?.Invoke());
-        hairColor.onColorChange.AddListener(color => param.onHairColorChange?.Invoke(color));
-        hairColorBtn.onClick.AddListener(() => hairColor.gameObject.SetActive(!hairColor.gameObject.activeSelf));
+        hairColor.onColorChange.AddListener(color =>
+        {
+            param.onHairColorChange?.Invoke(color);
+            currentHairColor = color;
+        });
+        hairColorBtn.onClick.AddListener(() =>
+        {
+            hairColor.gameObject.SetActive(!hairColor.gameObject.activeSelf);
+            hairColor.SetColor(currentHairColor);
+        });
         hairColor.SetColor(param.initialHairColor);
     }
 }
