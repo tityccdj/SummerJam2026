@@ -407,7 +407,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::UIMainMenu
   playButton: {fileID: 1218985905}
   settingButton: {fileID: 1122559800}
-  exitButton: {fileID: 0}
 --- !u!1 &168178409
 GameObject:
   m_ObjectHideFlags: 0
@@ -2627,7 +2626,7 @@ MonoBehaviour:
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_RaycastTarget: 1
-  m_RaycastPadding: {x: 179.89, y: 246.28, z: 159.45, w: 323.35}
+  m_RaycastPadding: {x: 280.3, y: 383.7, z: 241.8, w: 504.8}
   m_Maskable: 1
   m_OnCullStateChanged:
     m_PersistentCalls:
@@ -2803,7 +2802,7 @@ MonoBehaviour:
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_RaycastTarget: 1
-  m_RaycastPadding: {x: 174, y: 411.64, z: 141.67, w: 129.71}
+  m_RaycastPadding: {x: 267.65, y: 611.9, z: 217.8, w: 204.1}
   m_Maskable: 1
   m_OnCullStateChanged:
     m_PersistentCalls:
