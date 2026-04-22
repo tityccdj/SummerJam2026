@@ -1,3 +1,4 @@
+﻿using System.Collections.Generic;
 using UnityEngine;
 
 [DisallowMultipleComponent]
@@ -17,6 +18,12 @@ public class RoutesRenderer : MonoBehaviour
     [SerializeField] private int sortingOrder = 0;
     [SerializeField] private int centerLineSortingOrder = 1;
     [SerializeField] private int startLineSortingOrder = 2;
+
+    // 🌟 ส่วนที่เพิ่มใหม่สำหรับกองเชียร์
+    [Header("Props (Cheerleaders)")]
+    [SerializeField] private string cheerPrefabPath = "prefabs/cheer";
+    [SerializeField] private float distanceOutsideTrack = 2.0f; // ระยะห่างจากขอบถนน
+    private List<GameObject> spawnedCheerleaders = new List<GameObject>();
 
     private LineRenderer trackRenderer;
     private LineRenderer centerLineRenderer;
@@ -45,7 +52,6 @@ public class RoutesRenderer : MonoBehaviour
     [ContextMenu("Refresh Route")]
     public void Refresh()
     {
-
         RouteData route = RouteDatabase.Instance.GetRoute(routeId);
         if (route == null)
         {
@@ -63,6 +69,9 @@ public class RoutesRenderer : MonoBehaviour
         ApplyToRenderer(trackRenderer, splinePoints, route.trackWidth * widthMultiplier, trackColor, sortingOrder, route.closed);
         ApplyToRenderer(centerLineRenderer, splinePoints, centerLineWidth, centerLineColor, centerLineSortingOrder, route.closed);
         ApplyStartLine(route);
+
+        // 🌟 เรียกใช้ฟังก์ชันสร้างกองเชียร์
+        SpawnCheerleaders(route);
     }
 
     private void EnsureRenderers()
@@ -141,6 +150,56 @@ public class RoutesRenderer : MonoBehaviour
         };
 
         ApplyToRenderer(startLineRenderer, points, startLineWidth, startLineColor, startLineSortingOrder, false);
+    }
+
+    // 🌟 ฟังก์ชันสร้างกองเชียร์ข้างสนาม
+    private void SpawnCheerleaders(RouteData route)
+    {
+        // ลบของเก่าทิ้งก่อน (ถ้ามีการกดยืนยัน Refresh ด่านใหม่)
+        foreach (var obj in spawnedCheerleaders)
+        {
+            if (obj != null) DestroyImmediate(obj); // ใช้ DestroyImmediate เพื่อให้ลบในโหมด Edit ได้
+        }
+        spawnedCheerleaders.Clear();
+
+        if (route == null || !route.IsValid()) return;
+
+        // โหลด Prefab ตามชื่อที่ตั้งไว้
+        GameObject cheerPrefab = Resources.Load<GameObject>(cheerPrefabPath);
+        if (cheerPrefab == null)
+        {
+            Debug.LogWarning($"[RoutesRenderer] หา Prefab กองเชียร์ไม่เจอใน Resources! (ตรวจสอบโฟลเดอร์ {cheerPrefabPath})");
+            return;
+        }
+
+        // หาจุดกึ่งกลางและทิศทางของเส้นชัย (ที่จุด progress 0f)
+        Vector2 center = route.EvaluatePosition(0f);
+        Vector2 normal = route.EvaluateNormal(0f).normalized;
+
+        // คำนวณความกว้างครึ่งหนึ่งของถนน + ระยะห่างออกมานอกถนน
+        float spawnDistance = (route.trackWidth * widthMultiplier * 0.5f) + distanceOutsideTrack;
+
+        // จุดเกิดด้านซ้ายและขวา
+        Vector3 leftPos = new Vector3(center.x - normal.x * spawnDistance, center.y - normal.y * spawnDistance, 0f);
+        Vector3 rightPos = new Vector3(center.x + normal.x * spawnDistance, center.y + normal.y * spawnDistance, 0f);
+
+        // สร้างกองเชียร์ฝั่งซ้าย
+        GameObject cheerLeft = Instantiate(cheerPrefab, leftPos, Quaternion.identity, transform);
+        cheerLeft.name = "Cheerleaders_Left";
+
+        // สร้างกองเชียร์ฝั่งขวา
+        GameObject cheerRight = Instantiate(cheerPrefab, rightPos, Quaternion.identity, transform);
+        cheerRight.name = "Cheerleaders_Right";
+
+        // (เผื่อไว้) ถ้าอยากให้ฝั่งซ้ายหันหน้าเข้าหาถนน สลับ FlipX ได้
+        SpriteRenderer srLeft = cheerLeft.GetComponentInChildren<SpriteRenderer>();
+        if (srLeft != null) srLeft.flipX = false;
+
+        SpriteRenderer srRight = cheerRight.GetComponentInChildren<SpriteRenderer>();
+        if (srRight != null) srRight.flipX = true;
+
+        spawnedCheerleaders.Add(cheerLeft);
+        spawnedCheerleaders.Add(cheerRight);
     }
 
     private void ApplyToRenderer(LineRenderer renderer, Vector3[] points, float width, Color color, int rendererSortingOrder, bool loop)

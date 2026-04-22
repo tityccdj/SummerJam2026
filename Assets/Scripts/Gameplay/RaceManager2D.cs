@@ -10,7 +10,7 @@ using static RaceResult;
 [DisallowMultipleComponent]
 public class RaceManager2D : MonoBehaviour
 {
-    public TextMeshProUGUI New_Laptext;
+    
     private const string CountSoundName = "count";
     private const string RaceSoundName = "race";
     private const string FailSoundName = "fail";
@@ -38,15 +38,17 @@ public class RaceManager2D : MonoBehaviour
     [SerializeField] private float runnerCollisionDistance = 0.55f;
     [SerializeField] private float runnerCollisionCameraShakeMagnitude = 0.18f;
     [SerializeField] private float runnerCollisionCameraShakeDuration = 0.28f;
-    [SerializeField] private int obstacleCount = 7;
+    [SerializeField] private int obstacleCount = 10;
     [SerializeField] private string obstaclePrefabResourcesPath = "prefabs/obstacles";
     [SerializeField] private int obstaclePrefabMinIndex = 0;
-    [SerializeField] private int obstaclePrefabMaxIndex = 8;
-    [SerializeField] private float obstacleScale = 0.3f;
-    [SerializeField] private float obstacleRadius = 0.2f;
+    [SerializeField] private int obstaclePrefabMaxIndex = 4;
+    [SerializeField] private float obstacleScale = 0.2f;
+    [SerializeField] private float obstacleRadius = 0.7f;
     [SerializeField] private float obstacleSpawnPaddingRatio = 0.72f;
-    [SerializeField] private float obstacleSpacing = 0.95f;
+    [SerializeField] private float obstacleSpacing = 8f;
     [SerializeField] private float obstacleScreenExitDuration = 0.65f;
+    [SerializeField] private int minObstacleCount = 5;
+    
 
 
     [Header("UI")]
@@ -63,13 +65,19 @@ public class RaceManager2D : MonoBehaviour
     private readonly List<RaceObstacle2D> activeObstacles = new List<RaceObstacle2D>();
     private readonly List<RaceItemBox2D> activeItemBoxes = new List<RaceItemBox2D>();
     private TextMeshProUGUI rankText;
+    private TextMeshProUGUI MyrankText;
+    private TextMeshProUGUI FirstPlace_name;
+    private TextMeshProUGUI SecondPlace_name;
+    private TextMeshProUGUI ThirdPlace_name;
     private TextMeshProUGUI lapText;
+    private TextMeshProUGUI New_Laptext;
     private TextMeshProUGUI countDownText;
     private PlayerSplineRunner humanRunner;
     private Canvas uiCanvas;
     private CameraFollow2D cameraFollow;
     private Coroutine countdownRoutine;
     private TMP_FontAsset uiFont;
+    private RouteData currentRouteData;
 
     public PlayerSplineRunner HumanRunner => humanRunner;
 
@@ -92,8 +100,13 @@ public class RaceManager2D : MonoBehaviour
         uiCanvas = canvas != null ? canvas : GameObject.Find("Canvas").GetComponent<Canvas>();
         cameraFollow = Camera.main != null ? Camera.main.GetComponent<CameraFollow2D>() : null;
         New_Laptext = GameObject.Find("round").GetComponent<TextMeshProUGUI>();
+        MyrankText = GameObject.Find("my_ranktext").GetComponent<TextMeshProUGUI>();
+        FirstPlace_name = GameObject.Find("first_place_name").GetComponent<TextMeshProUGUI>();
+        SecondPlace_name = GameObject.Find("second_place_name").GetComponent<TextMeshProUGUI>();
+        ThirdPlace_name = GameObject.Find("third_place_name").GetComponent<TextMeshProUGUI>();
 
         RouteData route = routesRenderer.GetRouteData();
+        currentRouteData = route;
         float trackWidth = route != null ? route.trackWidth : 2.5f;
         float usableLaneSpacing = Mathf.Clamp(laneSpacing, 0.18f, trackWidth * 0.25f);
         EnsureUi(uiCanvas);
@@ -177,10 +190,9 @@ public class RaceManager2D : MonoBehaviour
         boxObj.transform.position = new Vector3(worldPos.x, worldPos.y, 0f);
 
         SpriteRenderer sr = boxObj.AddComponent<SpriteRenderer>();
-        sr.sprite = GetSquareSprite();
-        sr.color = new Color(0.1f, 0.8f, 1f, 1f); // �����ͧ���տ�����ҧ� �����ͧ��繧���
+        sr.sprite = Resources.Load<Sprite>("Item/Box");
         sr.sortingOrder = 2;
-        boxObj.transform.localScale = new Vector3(35f, 35f, 1f);
+        boxObj.transform.localScale = new Vector3(0.2f, 0.2f, 1f);
 
         RaceItemBox2D box = boxObj.AddComponent<RaceItemBox2D>();
         activeItemBoxes.Add(box);
@@ -224,6 +236,7 @@ public class RaceManager2D : MonoBehaviour
         UpdateObstacleHits();
         UpdateItemBoxHits();
         UpdateUi();
+        MaintainObstacleCount();
     }
 
     private PlayerSplineRunner CreateOrUsePlayerRunner(PlayerSplineRunner existingRunner, RoutesRenderer routesRenderer)
@@ -321,8 +334,8 @@ public class RaceManager2D : MonoBehaviour
         }
 
         LoadUiFont();
-        rankText = FindOrCreateText(canvas.transform, rankTextName, new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-18f, -18f), TextAlignmentOptions.TopRight);
-        lapText = FindOrCreateText(canvas.transform, lapTextName, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(18f, -18f), TextAlignmentOptions.TopLeft);
+        //rankText = FindOrCreateText(canvas.transform, rankTextName, new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-18f, -18f), TextAlignmentOptions.TopRight);
+        //lapText = FindOrCreateText(canvas.transform, lapTextName, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(18f, -18f), TextAlignmentOptions.TopLeft);
         countDownText = FindOrCreateText(canvas.transform, countDownTextName, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, 90f), TextAlignmentOptions.Center);
         Debug.Log($"countDownText: {countDownText}");
         ApplyUiFont(rankText);
@@ -379,13 +392,45 @@ public class RaceManager2D : MonoBehaviour
             .ToList();
 
         int humanRank = Mathf.Max(1, orderedRunners.IndexOf(humanRunner) + 1);
-
-        if (rankText != null)
+        if(FirstPlace_name != null)
         {
-            rankText.text = $"Rank {humanRank}/{orderedRunners.Count}";
+            //FirstPlace_name.text = orderedRunners.Count >= 1 && orderedRunners[0] != null ? orderedRunners[0].RunnerName : "???";
+            FirstPlace_name.text = $"1st: {orderedRunners[0].RunnerName}";
+        }
+        if (SecondPlace_name != null)
+        {
+            //SecondPlace_name.text = orderedRunners.Count >= 2 && orderedRunners[1] != null ? orderedRunners[1].RunnerName : "???";
+            SecondPlace_name.text = $"2nd: {orderedRunners[1].RunnerName}";
+        }
+        if (ThirdPlace_name != null)
+        {
+            //ThirdPlace_name.text = orderedRunners.Count >= 3 && orderedRunners[2] != null ? orderedRunners[2].RunnerName : "???";
+            ThirdPlace_name.text = $"3rd: {orderedRunners[2].RunnerName}";
+        }
+        if (MyrankText != null)
+        {
+            string rankDisplay = "";
+            if (humanRank == 1)
+            {
+                rankDisplay = "1st";
+            }
+            else if (humanRank == 2)
+            {
+                rankDisplay = "2nd";
+            }
+            else if (humanRank == 3)
+            {
+                rankDisplay = "3rd";
+            }
+            else
+            {
+                rankDisplay = $"{humanRank}th";
+            }
+            MyrankText.text = $"Your rank {rankDisplay}";
+            //rankText.text = $"Rank {humanRank}/{orderedRunners.Count}";
         }
 
-        if (lapText != null && humanRunner != null)
+        if (New_Laptext != null && humanRunner != null)
         {
             int shownLap = Mathf.Min(humanRunner.CompletedLaps + 1, lapCount);
             if (humanRunner.IsFinished)
@@ -393,7 +438,7 @@ public class RaceManager2D : MonoBehaviour
                 shownLap = lapCount;
             }
             New_Laptext.text=$"Lap {shownLap} / {lapCount}";
-            lapText.text = $"Lap {shownLap}/{lapCount}";
+            //lapText.text = $"Lap {shownLap}/{lapCount}";
         }
     }
 
@@ -781,7 +826,6 @@ public class RaceManager2D : MonoBehaviour
             obstacleObject.transform.SetParent(transform, false);
 
             SpriteRenderer obstacleRenderer = obstacleObject.AddComponent<SpriteRenderer>();
-            obstacleRenderer.sprite = GetSquareSprite();
             obstacleRenderer.color = new Color(0.92f, 0.92f, 0.92f, 1f);
             obstacleRenderer.sortingOrder = 3;
         }
@@ -843,7 +887,7 @@ public class RaceManager2D : MonoBehaviour
         hazardObject.transform.position = new Vector3(worldPosition.x, worldPosition.y, 0f);
 
         SpriteRenderer hazardRenderer = hazardObject.AddComponent<SpriteRenderer>();
-        hazardRenderer.sprite = Resources.Load<Sprite>("Item/Banana");
+        hazardRenderer.sprite = Resources.Load<Sprite>("Item/Trap");
         hazardRenderer.sortingOrder = 2;
         hazardObject.transform.localScale = new Vector3(0.2f, 0.2f, 1f);
 
@@ -960,11 +1004,61 @@ public class RaceManager2D : MonoBehaviour
         // 4. โหลดหน้าต่างสรุปผล (เปลี่ยนชื่อ "ResultScene" เป็นชื่อ Scene สรุปผลของคุณ)
         SceneManager.LoadScene("Result");
     }
-    
+    private void MaintainObstacleCount()
+    {
+        if (currentRouteData == null || !currentRouteData.IsValid() || minObstacleCount <= 0)
+        {
+            return;
+        }
+
+        // ถ้าจำนวนสิ่งกีดขวางในด่านเหลือน้อยกว่า 5
+        if (activeObstacles.Count < minObstacleCount)
+        {
+            float halfTrackWidth = currentRouteData.trackWidth * obstacleSpawnPaddingRatio * 0.5f;
+            int attempts = 10; // ลองสุ่มหาจุดเกิด 10 ครั้งต่อเฟรมเพื่อหาจุดที่ว่างจริงๆ
+
+            for (int i = 0; i < attempts; i++)
+            {
+                float progress = Random.value; // สุ่มจุดเกิดตลอดทั้งเส้นทาง (0 ถึง 1)
+                Vector2 center = currentRouteData.EvaluatePosition(progress);
+                Vector2 normal = currentRouteData.EvaluateNormal(progress);
+                float lateral = Random.Range(-halfTrackWidth, halfTrackWidth);
+                Vector2 candidatePos = center + normal * lateral;
+
+                bool overlaps = false;
+
+                // เช็ก 1: จุดที่เกิด ทับกับสิ่งกีดขวางอันอื่นไหม
+                foreach (var obs in activeObstacles)
+                {
+                    if (obs != null && Vector2.Distance(obs.transform.position, candidatePos) < obstacleSpacing)
+                    {
+                        overlaps = true;
+                        break;
+                    }
+                }
+                if (overlaps) continue;
+
+                // เช็ก 2: จุดที่เกิด อยู่ใกล้รถแข่งเกินไปไหม (ป้องกันเกิดทับหน้าผู้เล่นกะทันหัน รัศมี 3 หน่วย)
+                foreach (var runner in runners)
+                {
+                    if (runner != null && !runner.IsFinished && Vector2.Distance(runner.transform.position, candidatePos) < 3.0f)
+                    {
+                        overlaps = true;
+                        break;
+                    }
+                }
+                if (overlaps) continue;
+
+                // ถ้าที่ว่างปลอดภัย ให้สร้างสิ่งกีดขวางใหม่ แล้วออกจากลูปทันที (สร้างทีละ 1 อัน เพื่อไม่ให้เกมกระตุก)
+                SpawnObstacle(candidatePos);
+                break;
+            }
+        }
+    }
     IEnumerator GotoResult()
     {
         // รอ 2 วินาทีเพื่อให้ผู้เล่นเห็นผลลัพธ์บนหน้าจอแข่งก่อน
-        yield return new WaitForSeconds(2f);
+        yield return new WaitForSeconds(3f);
         SaveResultsAndLoadScene();
     }
 }

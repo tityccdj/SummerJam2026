@@ -361,7 +361,7 @@ public class PlayerSplineRunner : MonoBehaviour
         }
 
         sr.sortingOrder = 50;
-        bullet.transform.localScale = new Vector3(100f, 100f, 1f);
+        bullet.transform.localScale = new Vector3(0.6f, 0.6f, 1f);
 
         GunBullet logic = bullet.AddComponent<GunBullet>();
 
@@ -1055,7 +1055,13 @@ public class GunBullet : MonoBehaviour
             // ถ้าเป้าหมายไม่มี (เราเป็นที่ 1) หรือเป้าหมายเข้าเส้นชัยไปแล้ว ให้วิ่งตรงๆ ไปตามทาง
             moveDirection = fallbackDirection;
         }
-
+        if (moveDirection.sqrMagnitude > 0.001f)
+        {
+            // คำนวณหาองศาจากแกน X และ Y
+            float angle = Mathf.Atan2(moveDirection.y, moveDirection.x) * Mathf.Rad2Deg;
+            // สั่งหมุนแกน Z ของรูปภาพ
+            transform.rotation = Quaternion.Euler(0, 0, angle);
+        }
         // เคลื่อนที่ไปตามทิศทางที่คำนวณไว้
         transform.position += moveDirection * speed * Time.deltaTime;
 
