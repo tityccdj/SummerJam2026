@@ -15,21 +15,10 @@ public class UIMainMenu : MonoBehaviour
     private Button playButton;
     [SerializeField]
     private Button settingButton;
-    [SerializeField]
-    private Button exitButton;
-
-    void Start()
-    {
-        if (Utility.IsWebGL())
-        {
-            exitButton.gameObject.SetActive(false);
-        }
-    }
 
     public void Setup(Param param)
     {
         playButton.onClick.AddListener(() => param.onPlay?.Invoke());
         settingButton.onClick.AddListener(() => param.onSetting?.Invoke());
-        exitButton.onClick.AddListener(() => param.onExit?.Invoke());
     }
 }
