@@ -66,6 +66,8 @@ public class ButtonAnimation : MonoBehaviour, IPointerEnterHandler, IPointerExit
         LeanTween.cancel(gameObject);
         LeanTween.scale(gameObject, originalScale * pressScale, animationDuration * 0.5f)
             .setEase(LeanTweenType.easeInOutQuad);
+
+        AudioManager.Instance.PlaySFXOneShot("pop");
     }
 
     public void OnPointerUp(PointerEventData eventData)

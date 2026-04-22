@@ -9,12 +9,13 @@ public class SceneLoader : MonoBehaviour
 
     [Header("Transition Settings")]
     [SerializeField] private GameObject transitionCanvas;
-    [SerializeField] private Image fadeImage;
+    [SerializeField] private CanvasGroup fadeCanvasGroup;
     [SerializeField] private float fadeDuration = 1f;
     
     [Header("Loading Settings")]
     [SerializeField] private bool showLoadingProgress = false;
-    [SerializeField] private Image loadingBar;
+    [SerializeField] private float minimumLoadTime = 2.5f;
+    [SerializeField] private Image[] loadingBar;
     [SerializeField] private TMPro.TextMeshProUGUI loadingText;
 
     private bool isLoading = false;
@@ -96,15 +97,17 @@ public class SceneLoader : MonoBehaviour
         AsyncOperation asyncLoad = SceneManager.LoadSceneAsync(sceneName);
         asyncLoad.allowSceneActivation = false;
 
-        // Wait for scene to load
-        while (asyncLoad.progress < 0.9f)
+        float startTime = Time.time;
+
+        // Wait for scene to load with minimum display time
+        while (asyncLoad.progress < 0.9f || Time.time - startTime < minimumLoadTime)
         {
-            UpdateLoadingProgress(asyncLoad.progress);
+            float realProgress = asyncLoad.progress / 0.9f;
+            float fakeProgress = Mathf.Clamp01((Time.time - startTime) / minimumLoadTime);
+            UpdateLoadingProgress(Mathf.Max(realProgress, fakeProgress));
             yield return null;
         }
-
-        // Scene is ready, wait a bit for smooth transition
-        yield return new WaitForSeconds(0.5f);
+        UpdateLoadingProgress(1f);
 
         // Activate the scene
         asyncLoad.allowSceneActivation = true;
@@ -144,15 +147,17 @@ public class SceneLoader : MonoBehaviour
         AsyncOperation asyncLoad = SceneManager.LoadSceneAsync(sceneIndex);
         asyncLoad.allowSceneActivation = false;
 
-        // Wait for scene to load
-        while (asyncLoad.progress < 0.9f)
+        float startTime = Time.time;
+
+        // Wait for scene to load with minimum display time
+        while (asyncLoad.progress < 0.9f || Time.time - startTime < minimumLoadTime)
         {
-            UpdateLoadingProgress(asyncLoad.progress);
+            float realProgress = asyncLoad.progress / 0.9f;
+            float fakeProgress = Mathf.Clamp01((Time.time - startTime) / minimumLoadTime);
+            UpdateLoadingProgress(Mathf.Max(realProgress, fakeProgress));
             yield return null;
         }
-
-        // Scene is ready, wait a bit for smooth transition
-        yield return new WaitForSeconds(0.5f);
+        UpdateLoadingProgress(1f);
 
         // Activate the scene
         asyncLoad.allowSceneActivation = true;
@@ -177,40 +182,42 @@ public class SceneLoader : MonoBehaviour
 
     private IEnumerator FadeOut()
     {
-        if (fadeImage == null) yield break;
+        if (fadeCanvasGroup == null) yield break;
 
         float elapsedTime = 0f;
-        Color color = fadeImage.color;
 
         while (elapsedTime < fadeDuration)
         {
             elapsedTime += Time.deltaTime;
-            color.a = Mathf.Clamp01(elapsedTime / fadeDuration);
-            fadeImage.color = color;
+            fadeCanvasGroup.alpha = Mathf.Clamp01(elapsedTime / fadeDuration);
             yield return null;
         }
 
-        color.a = 1f;
-        fadeImage.color = color;
+        fadeCanvasGroup.alpha = 1f;
     }
 
     private IEnumerator FadeIn()
     {
-        if (fadeImage == null) yield break;
+        if (fadeCanvasGroup == null) yield break;
+
+        if (loadingBar != null)
+        {
+            foreach (var bar in loadingBar)
+            {
+                bar.fillAmount = 0;
+            }
+        }
 
         float elapsedTime = 0f;
-        Color color = fadeImage.color;
 
         while (elapsedTime < fadeDuration)
         {
             elapsedTime += Time.deltaTime;
-            color.a = Mathf.Clamp01(1f - (elapsedTime / fadeDuration));
-            fadeImage.color = color;
+            fadeCanvasGroup.alpha = Mathf.Clamp01(1f - (elapsedTime / fadeDuration));
             yield return null;
         }
 
-        color.a = 0f;
-        fadeImage.color = color;
+        fadeCanvasGroup.alpha = 0f;
     }
 
     private void UpdateLoadingProgress(float progress)
@@ -219,7 +226,10 @@ public class SceneLoader : MonoBehaviour
 
         if (loadingBar != null)
         {
-            loadingBar.fillAmount = progress;
+            foreach (var bar in loadingBar)
+            {
+                bar.fillAmount = Mathf.Lerp(bar.fillAmount, progress, Time.deltaTime * 10f);
+            }
         }
 
         if (loadingText != null)
