@@ -49,7 +49,13 @@ public class RaceManager2D : MonoBehaviour
     [SerializeField] private float obstacleSpacing = 8f;
     [SerializeField] private float obstacleScreenExitDuration = 0.65f;
     [SerializeField] private int minObstacleCount = 5;
-    
+
+    private readonly List<string> cpuNamePool = new List<string>
+    {
+        "Homelander", "Anutee", "SomO", "Tea", "Nut",
+        "Yo", "ANui", "Poysean", "Moey", "USainBolt", "Eren"
+    };
+
 
 
     [Header("UI")]
@@ -120,15 +126,26 @@ public class RaceManager2D : MonoBehaviour
             runners.Add(humanRunner);
             CreateRunnerNameTag(humanRunner, "Player");
         }
+        List<string> availableCpuNames = new List<string>(cpuNamePool);
+        for (int i = 0; i < availableCpuNames.Count; i++)
+        {
+            string temp = availableCpuNames[i];
+            int randomIndex = Random.Range(i, availableCpuNames.Count);
+            availableCpuNames[i] = availableCpuNames[randomIndex];
+            availableCpuNames[randomIndex] = temp;
+        }
+
 
         for (int i = 1; i <= cpuRunnerCount; i++)
         {
-            PlayerSplineRunner cpuRunner = CreateCpuRunner(i, routesRenderer, usableLaneSpacing);
+            string randomName = availableCpuNames[(i - 1) % availableCpuNames.Count];
+            PlayerSplineRunner cpuRunner = CreateCpuRunner(i, routesRenderer, usableLaneSpacing, randomName);
             if (cpuRunner != null)
             {
                 MatchRunnerVisualScale(cpuRunner, humanRunner);
                 runners.Add(cpuRunner);
-                CreateRunnerNameTag(cpuRunner, $"CPU {i}");
+                //CreateRunnerNameTag(cpuRunner, $"CPU {i}");
+                CreateRunnerNameTag(cpuRunner, randomName);
             }
         }
 
@@ -280,7 +297,7 @@ public class RaceManager2D : MonoBehaviour
         return resolvedRunner;
     }
 
-    private PlayerSplineRunner CreateCpuRunner(int prefabIndex, RoutesRenderer routesRenderer, float usableLaneSpacing)
+    private PlayerSplineRunner CreateCpuRunner(int prefabIndex, RoutesRenderer routesRenderer, float usableLaneSpacing, string cpuName)
     {
         GameObject cpuPrefab = LoadPlayerPrefab();
         GameObject cpuObject;
@@ -288,11 +305,13 @@ public class RaceManager2D : MonoBehaviour
         if (cpuPrefab != null)
         {
             cpuObject = Instantiate(cpuPrefab, transform);
-            cpuObject.name = $"CPU Runner {prefabIndex}";
+            //cpuObject.name = $"CPU Runner {prefabIndex}";
+            cpuObject.name = cpuName;
         }
         else
         {
-            cpuObject = new GameObject($"CPU Runner {prefabIndex}");
+            //cpuObject = new GameObject($"CPU Runner {prefabIndex}");
+            cpuObject = new GameObject(cpuName);
             cpuObject.transform.SetParent(transform, false);
 
             SpriteRenderer cpuSprite = cpuObject.AddComponent<SpriteRenderer>();
@@ -317,7 +336,10 @@ public class RaceManager2D : MonoBehaviour
         float startProgress = Mathf.Repeat(1f - (prefabIndex * startProgressSpacing), 0.0001f);
         float lateralOffset = GetCpuLaneOffset(prefabIndex - 1, usableLaneSpacing);
 
-        cpuRunner.ConfigureRunner($"CPU {prefabIndex}", false, routesRenderer, null, null, lapCount);
+        //cpuRunner.ConfigureRunner($"CPU {prefabIndex}", false, routesRenderer, null, null, lapCount);
+        //cpuRunner.ResetRunnerState(startProgress, lateralOffset);
+        //return cpuRunner;
+        cpuRunner.ConfigureRunner(cpuName, false, routesRenderer, null, null, lapCount);
         cpuRunner.ResetRunnerState(startProgress, lateralOffset);
         return cpuRunner;
     }

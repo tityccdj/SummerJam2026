@@ -1,5 +1,6 @@
 using TMPro;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using static RaceResult;
 
 public class Result : MonoBehaviour
@@ -68,5 +69,13 @@ public class Result : MonoBehaviour
             }
         }
     }
+    public void Restart()
+    {
+        SceneManager.LoadScene("Game");
+    }
 
+    public void ExitToMenu()
+    {
+        SceneManager.LoadScene("Title");
+    }
 }
