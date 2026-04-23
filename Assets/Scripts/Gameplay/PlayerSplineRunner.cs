@@ -320,37 +320,35 @@ public class PlayerSplineRunner : MonoBehaviour
                 ApplySpeedBoost(1.5f, 2f);
                 heatImmunityEndTime = Time.time + 2f;
                 speedDampingMultiplier = 0.5f;
-<<<<<<< HEAD
+
                 if (isHuman) AudioManager.Instance?.PlaySFXOneShot(SodaSoundName);
                 if (sodaSpeedVfx != null) sodaSpeedVfx.Play();
+
                 //colorEffectCoroutine = StartCoroutine(ItemColorEffect(new Color(1f, 0.8f, 0.2f), 3f));
-=======
-                colorEffectCoroutine = StartCoroutine(ItemColorEffect(new Color(1f, 0.8f, 0.2f), 3f));
                 Debug.Log($"<color=lime> [{RunnerName}] </color> กดใช้: <color=orange> Soda  </color>");
                 EffectManager.Instance?.PlayEffect("soda", transform.position);
->>>>>>> 60121c88b91df29b70b8311186538197b9c48e87
+
                 break;
 
             case RaceItemType.Banana:
                 QueueHazardDrop();
-<<<<<<< HEAD
+
                 if (isHuman) AudioManager.Instance?.PlaySFXOneShot(BananaSoundName);
                 //colorEffectCoroutine = StartCoroutine(ItemColorEffect(Color.green, 1f));
-=======
                 colorEffectCoroutine = StartCoroutine(ItemColorEffect(Color.green, 1f));
                 Debug.Log($"<color=lime> [{RunnerName}] </color> กดใช้: <color=yellow> Banana  </color>");
                 EffectManager.Instance?.PlayEffect("powder", transform.position);
->>>>>>> 60121c88b91df29b70b8311186538197b9c48e87
+
                 break;
 
             case RaceItemType.Ice:
                 ResetHeat();
                 heatImmunityEndTime = Time.time + 3f;
-<<<<<<< HEAD
+
                 if (iceAuraVfx != null) iceAuraVfx.Play();
-                //colorEffectCoroutine = StartCoroutine(ItemColorEffect(Color.cyan, 3f));
+
                 if (isHuman) AudioManager.Instance?.PlaySFXOneShot(IceSoundName);
-=======
+
                 colorEffectCoroutine = StartCoroutine(ItemColorEffect(Color.cyan, 3f));
                 EffectManager.Instance?.PlayEffect("ice", transform.position);
                 if (isHuman)
@@ -358,7 +356,6 @@ public class PlayerSplineRunner : MonoBehaviour
                     AudioManager.Instance?.PlaySFXOneShot(IceSoundName);
                 }
                 Debug.Log($"<color=lime> [{RunnerName}] </color> กดใช้: <color=cyan> Ice  </color>");
->>>>>>> 60121c88b91df29b70b8311186538197b9c48e87
                 break;
 
             case RaceItemType.Sun:
@@ -377,11 +374,11 @@ public class PlayerSplineRunner : MonoBehaviour
             case RaceItemType.Weight:
                 if (targetAhead != null)
                 {
-<<<<<<< HEAD
+
                     // 🌟 ส่งชื่อตัวเอง (คนยิง) เข้าไปด้วย
                     targetAhead.ApplyWeightDebuff(RunnerName);
                     if (isHuman) AudioManager.Instance?.PlaySFXOneShot(BalloonSoundName);
-=======
+
                     targetAhead.ApplySpeedBoost(0.8f, 3f); // วิ่งได้แค่ 80% เป็นเวลา 3 วินาที
                     targetAhead.colorEffectCoroutine = targetAhead.StartCoroutine(targetAhead.ItemColorEffect(Color.magenta, 3f));
                     if (isHuman)
@@ -390,7 +387,6 @@ public class PlayerSplineRunner : MonoBehaviour
                     }
                     EffectManager.Instance?.PlayEffect("water_drop", targetAhead.transform.position);
                     Debug.Log($"<color=lime> [{RunnerName}] </color> ลดสปีดใส่: <color=magenta> {targetAhead.RunnerName} </color>");
->>>>>>> 60121c88b91df29b70b8311186538197b9c48e87
                 }
                 break;
         }
@@ -455,7 +451,6 @@ public class PlayerSplineRunner : MonoBehaviour
     {
         if (!isHuman) return; // ไม่ต้องโชว์ให้บอทดู
 
-<<<<<<< HEAD
         if (hitFeedbackImage != null)
         {
             Sprite loadedSprite = Resources.Load<Sprite>($"Item/{itemType.ToString()}");
@@ -507,11 +502,11 @@ public class PlayerSplineRunner : MonoBehaviour
         //colorEffectCoroutine = StartCoroutine(ItemColorEffect(Color.magenta, 3f));
         if (weightHeavyVfx != null) weightHeavyVfx.Play();
         if (!string.IsNullOrEmpty(attackerName)) ShowHitFeedback(RaceItemType.Weight, attackerName);
-=======
+
         if (colorEffectCoroutine != null) StopCoroutine(colorEffectCoroutine);
         colorEffectCoroutine = StartCoroutine(ItemColorEffect(new Color(1f, 0.5f, 0f), 1f)); // ตัวเป็นสีส้มแดง
         EffectManager.Instance?.PlayEffect("fire", transform.position);
->>>>>>> 60121c88b91df29b70b8311186538197b9c48e87
+
     }
 
     public void PlayerRun()
