@@ -59,6 +59,7 @@ public class Result : MonoBehaviour
             charModel.SetFace(data.FaceIndex);
             charModel.SetCloth(data.ClothIndex);
             charModel.SetHairColor(data.HairColor);
+            charModel.PlayAnimation("happy");
         }
         else
         {
