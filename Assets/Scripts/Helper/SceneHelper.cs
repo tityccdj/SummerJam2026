@@ -23,6 +23,7 @@ public class SceneHelper : MonoBehaviour
 
     private void Start()
     {
+        AudioManager.Instance?.StopMusic(true);
         StartCoroutine(StartBgm());
 
         RoutesRenderer routesRenderer = null;
