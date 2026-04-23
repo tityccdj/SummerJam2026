@@ -58,8 +58,8 @@ public class PlayerSplineRunner : MonoBehaviour
 
     [Header("OverHeat")]
     [SerializeField] private float maxOverHeat = 100f;
-    [SerializeField] private float runHeatGain = 15f;
-    [SerializeField] private float passiveCoolRate = 30f;
+    [SerializeField] private float runHeatGain = 18f;
+    [SerializeField] private float passiveCoolRate = 20f;
     [SerializeField] private float coolDownTapAmount = 10f;
     [SerializeField] private float overHeatRecoverThreshold = 25f;
     [SerializeField] private float globalSpeedMultiplier = 0.9f;
