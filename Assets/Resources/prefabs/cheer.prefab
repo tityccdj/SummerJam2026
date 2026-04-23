@@ -10,6 +10,7 @@ GameObject:
   m_Component:
   - component: {fileID: 5471613941087122479}
   - component: {fileID: 7173618792636519225}
+  - component: {fileID: 8573067442729245667}
   m_Layer: 0
   m_Name: cheer
   m_TagString: Untagged
@@ -91,3 +92,19 @@ SpriteRenderer:
   m_SpriteTileMode: 0
   m_WasSpriteAssigned: 1
   m_SpriteSortPoint: 0
+--- !u!114 &8573067442729245667
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 894727039733959258}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 32d2b678bc22ffa41a2825164995a7b7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::cheerscript
+  bounceHeight: 0.5
+  bounceSpeed: 3
+  useSquash: 1
+  squashAmount: 0.02

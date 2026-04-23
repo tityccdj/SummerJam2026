@@ -335,7 +335,7 @@ public class PlayerSplineRunner : MonoBehaviour
 
                 if (isHuman) AudioManager.Instance?.PlaySFXOneShot(BananaSoundName);
                 //colorEffectCoroutine = StartCoroutine(ItemColorEffect(Color.green, 1f));
-                colorEffectCoroutine = StartCoroutine(ItemColorEffect(Color.green, 1f));
+                //colorEffectCoroutine = StartCoroutine(ItemColorEffect(Color.green, 1f));
                 Debug.Log($"<color=lime> [{RunnerName}] </color> กดใช้: <color=yellow> Banana  </color>");
                 EffectManager.Instance?.PlayEffect("powder", transform.position);
 
@@ -349,7 +349,7 @@ public class PlayerSplineRunner : MonoBehaviour
 
                 if (isHuman) AudioManager.Instance?.PlaySFXOneShot(IceSoundName);
 
-                colorEffectCoroutine = StartCoroutine(ItemColorEffect(Color.cyan, 3f));
+                //colorEffectCoroutine = StartCoroutine(ItemColorEffect(Color.cyan, 3f));
                 EffectManager.Instance?.PlayEffect("ice", transform.position);
                 if (isHuman)
                 {
@@ -380,7 +380,7 @@ public class PlayerSplineRunner : MonoBehaviour
                     if (isHuman) AudioManager.Instance?.PlaySFXOneShot(BalloonSoundName);
 
                     targetAhead.ApplySpeedBoost(0.8f, 3f); // วิ่งได้แค่ 80% เป็นเวลา 3 วินาที
-                    targetAhead.colorEffectCoroutine = targetAhead.StartCoroutine(targetAhead.ItemColorEffect(Color.magenta, 3f));
+                    //targetAhead.colorEffectCoroutine = targetAhead.StartCoroutine(targetAhead.ItemColorEffect(Color.magenta, 3f));
                     if (isHuman)
                     {
                         AudioManager.Instance?.PlaySFXOneShot(BalloonSoundName);
@@ -504,7 +504,7 @@ public class PlayerSplineRunner : MonoBehaviour
         if (!string.IsNullOrEmpty(attackerName)) ShowHitFeedback(RaceItemType.Weight, attackerName);
 
         if (colorEffectCoroutine != null) StopCoroutine(colorEffectCoroutine);
-        colorEffectCoroutine = StartCoroutine(ItemColorEffect(new Color(1f, 0.5f, 0f), 1f)); // ตัวเป็นสีส้มแดง
+        //colorEffectCoroutine = StartCoroutine(ItemColorEffect(new Color(1f, 0.5f, 0f), 1f)); // ตัวเป็นสีส้มแดง
         EffectManager.Instance?.PlayEffect("fire", transform.position);
 
     }
