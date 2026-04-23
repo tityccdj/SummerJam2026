@@ -273,18 +273,21 @@ public class PlayerSplineRunner : MonoBehaviour
                 speedDampingMultiplier = 0.5f;
                 colorEffectCoroutine = StartCoroutine(ItemColorEffect(new Color(1f, 0.8f, 0.2f), 3f));
                 Debug.Log($"<color=lime> [{RunnerName}] </color> กดใช้: <color=orange> Soda  </color>");
+                EffectManager.Instance?.PlayEffect("soda", transform.position);
                 break;
 
             case RaceItemType.Banana:
                 QueueHazardDrop();
                 colorEffectCoroutine = StartCoroutine(ItemColorEffect(Color.green, 1f));
                 Debug.Log($"<color=lime> [{RunnerName}] </color> กดใช้: <color=yellow> Banana  </color>");
+                EffectManager.Instance?.PlayEffect("powder", transform.position);
                 break;
 
             case RaceItemType.Ice:
                 ResetHeat();
                 heatImmunityEndTime = Time.time + 3f;
                 colorEffectCoroutine = StartCoroutine(ItemColorEffect(Color.cyan, 3f));
+                EffectManager.Instance?.PlayEffect("ice", transform.position);
                 if (isHuman)
                 {
                     AudioManager.Instance?.PlaySFXOneShot(IceSoundName);
@@ -321,6 +324,7 @@ public class PlayerSplineRunner : MonoBehaviour
                     {
                         AudioManager.Instance?.PlaySFXOneShot(BalloonSoundName);
                     }
+                    EffectManager.Instance?.PlayEffect("water_drop", targetAhead.transform.position);
                     Debug.Log($"<color=lime> [{RunnerName}] </color> ลดสปีดใส่: <color=magenta> {targetAhead.RunnerName} </color>");
                 }
                 break;
@@ -403,6 +407,7 @@ public class PlayerSplineRunner : MonoBehaviour
 
         if (colorEffectCoroutine != null) StopCoroutine(colorEffectCoroutine);
         colorEffectCoroutine = StartCoroutine(ItemColorEffect(new Color(1f, 0.5f, 0f), 1f)); // ตัวเป็นสีส้มแดง
+        EffectManager.Instance?.PlayEffect("fire", transform.position);
     }
 
     public void PlayerRun()
@@ -1092,6 +1097,7 @@ public class GunBullet : MonoBehaviour
             // ถ้าระยะห่างน้อยกว่า 0.8 หน่วย ถือว่าโดน
             if (Vector2.Distance(transform.position, runner.transform.position) < 0.8f)
             {
+                EffectManager.Instance?.PlayEffect("water_splash", runner.transform.position);
                 runner.TriggerInstantOverheat();
                 Destroy(gameObject); // ชนแล้วกระสุนหายไป
                 return;
