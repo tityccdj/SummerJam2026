@@ -50,5 +50,30 @@ MonoBehaviour:
     poolSize: 0
     autoReturnToPool: 0
     lifetime: 1
+  - name: ice
+    prefab: {fileID: 5112403345868107898, guid: 6f34ef0d986e9db4199cf75805f79753, type: 3}
+    poolSize: 0
+    autoReturnToPool: 0
+    lifetime: 1
+  - name: powder
+    prefab: {fileID: 141433446842962269, guid: 9fe8f8b3288e45a44af36ff8aa04486e, type: 3}
+    poolSize: 0
+    autoReturnToPool: 0
+    lifetime: 1
+  - name: soda
+    prefab: {fileID: 8771972552311404799, guid: bbf9e36a48d6c5648a13889afab076fd, type: 3}
+    poolSize: 0
+    autoReturnToPool: 0
+    lifetime: 1
+  - name: fire
+    prefab: {fileID: 8194992990867289339, guid: 99bc28c0d45f51c4fbac01080b73edc7, type: 3}
+    poolSize: 0
+    autoReturnToPool: 0
+    lifetime: 1
+  - name: water_drop
+    prefab: {fileID: 8205706795460263314, guid: 326e86d5729c54e479798cacab220bb2, type: 3}
+    poolSize: 0
+    autoReturnToPool: 0
+    lifetime: 1
   poolParent: {fileID: 0}
   defaultPoolSize: 10

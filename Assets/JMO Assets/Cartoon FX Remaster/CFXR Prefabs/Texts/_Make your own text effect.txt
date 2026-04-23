@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 Cartoon FX Remaster
 (c) 2020, Jean Moreno
 ---------------------
@@ -10,3 +11,17 @@ If editing the Prefab in a Scene directly, you will have to unpack it first (or 
 The root GameObject contains the "CFXR_ParticleText" script, which allows you to change the text and other parameters.
 The ParticleSystem on the root GameObject will define the behavior of each created letter: change parameters, and refresh the text to see the result.
 
+=======
+Cartoon FX Remaster
+(c) 2020, Jean Moreno
+---------------------
+
+You can make your own text effect like the prefabs in this folder.
+
+Just duplicate a prefab, and edit it.
+If editing the Prefab in a Scene directly, you will have to unpack it first (or go into edit Prefab mode from there).
+
+The root GameObject contains the "CFXR_ParticleText" script, which allows you to change the text and other parameters.
+The ParticleSystem on the root GameObject will define the behavior of each created letter: change parameters, and refresh the text to see the result.
+
+>>>>>>> 60121c88b91df29b70b8311186538197b9c48e87
