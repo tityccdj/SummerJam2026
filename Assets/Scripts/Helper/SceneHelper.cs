@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
@@ -22,7 +23,7 @@ public class SceneHelper : MonoBehaviour
 
     private void Start()
     {
-        AudioManager.Instance?.PlayMusic("bgm", 0.8f, true);
+        StartCoroutine(StartBgm());
 
         RoutesRenderer routesRenderer = null;
 
@@ -346,4 +347,11 @@ public class SceneHelper : MonoBehaviour
         Debug.LogWarning("�Ҫ�ͧ����ٻ���������! ��س�����һ������� Button (Item) ���١���� Image �������");
         return null;
     }
+
+    IEnumerator StartBgm()
+    {
+        yield return new WaitForSeconds(3f);
+        AudioManager.Instance?.PlayMusic("bgm", 0.25f, true);
+    }
+
 }

@@ -14,20 +14,21 @@ public class RoutesRenderer : MonoBehaviour
     [SerializeField] private Color centerLineColor = new Color(0.95f, 0.84f, 0.26f, 1f);
     [SerializeField] private Color startLineColor = Color.white;
     [SerializeField] private float centerLineWidth = 0.18f;
-    [SerializeField] private float startLineWidth = 0.28f;
+    [SerializeField] private float startLineWidth = 1f; // 🌟 ปรับความหนาของรูปเส้นชัยได้ตรงนี้
     [SerializeField] private int sortingOrder = 0;
     [SerializeField] private int centerLineSortingOrder = 1;
     [SerializeField] private int startLineSortingOrder = 2;
 
-    // 🌟 ส่วนที่เพิ่มใหม่สำหรับกองเชียร์
     [Header("Props (Cheerleaders)")]
     [SerializeField] private string cheerPrefabPath = "prefabs/cheer";
-    [SerializeField] private float distanceOutsideTrack = 2.0f; // ระยะห่างจากขอบถนน
+    [SerializeField] private float distanceOutsideTrack = 2.0f;
     private List<GameObject> spawnedCheerleaders = new List<GameObject>();
 
     private LineRenderer trackRenderer;
     private LineRenderer centerLineRenderer;
-    private LineRenderer startLineRenderer;
+
+    // 🌟 เปลี่ยนตัวแปร StartLine จาก LineRenderer เป็น SpriteRenderer
+    private SpriteRenderer startLineRenderer;
     private Material sharedLineMaterial;
 
     public int RouteId
@@ -68,9 +69,10 @@ public class RoutesRenderer : MonoBehaviour
 
         ApplyToRenderer(trackRenderer, splinePoints, route.trackWidth * widthMultiplier, trackColor, sortingOrder, route.closed);
         ApplyToRenderer(centerLineRenderer, splinePoints, centerLineWidth, centerLineColor, centerLineSortingOrder, route.closed);
+
+        // 🌟 เรียกฟังก์ชันสร้างเส้นชัยที่เป็นรูปภาพ
         ApplyStartLine(route);
 
-        // 🌟 เรียกใช้ฟังก์ชันสร้างกองเชียร์
         SpawnCheerleaders(route);
     }
 
@@ -96,9 +98,22 @@ public class RoutesRenderer : MonoBehaviour
             centerLineRenderer = GetOrCreateRenderer("CenterLine");
         }
 
+        // 🌟 แยกการสร้าง StartLine ออกมา เพราะมันเป็น SpriteRenderer
         if (startLineRenderer == null)
         {
-            startLineRenderer = GetOrCreateRenderer("StartLine");
+            Transform child = transform.Find("StartLine");
+            if (child == null)
+            {
+                GameObject childObject = new GameObject("StartLine");
+                childObject.transform.SetParent(transform, false);
+                child = childObject.transform;
+            }
+
+            startLineRenderer = child.GetComponent<SpriteRenderer>();
+            if (startLineRenderer == null)
+            {
+                startLineRenderer = child.gameObject.AddComponent<SpriteRenderer>();
+            }
         }
     }
 
@@ -132,6 +147,7 @@ public class RoutesRenderer : MonoBehaviour
         return renderer;
     }
 
+    // 🌟 เปลี่ยนโค้ดตรงนี้เพื่อรองรับรูปภาพ (Sprite)
     private void ApplyStartLine(RouteData route)
     {
         if (startLineRenderer == null || route == null || !route.IsValid())
@@ -139,32 +155,56 @@ public class RoutesRenderer : MonoBehaviour
             return;
         }
 
+        // 1. หาจุดกึ่งกลางและทิศทางขวางถนน (Normal)
         Vector2 center = route.EvaluatePosition(0f);
         Vector2 normal = route.EvaluateNormal(0f).normalized;
-        float halfWidth = route.trackWidth * widthMultiplier * 0.5f;
+        float trackFullWidth = route.trackWidth * widthMultiplier;
 
-        Vector3[] points =
+        // 2. จัดตำแหน่งไปวางไว้กลางถนน
+        startLineRenderer.transform.position = new Vector3(center.x, center.y, 0f);
+
+        // 3. โหลดภาพจาก Resources/Line
+        Sprite lineSprite = Resources.Load<Sprite>("Line");
+        if (lineSprite != null)
         {
-            new Vector3(center.x - normal.x * halfWidth, center.y - normal.y * halfWidth, 0f),
-            new Vector3(center.x + normal.x * halfWidth, center.y + normal.y * halfWidth, 0f)
-        };
+            startLineRenderer.sprite = lineSprite;
+        }
+        else
+        {
+            Debug.LogWarning("[RoutesRenderer] ไม่พบภาพ 'Line' ในโฟลเดอร์ Resources!");
+        }
 
-        ApplyToRenderer(startLineRenderer, points, startLineWidth, startLineColor, startLineSortingOrder, false);
+        // 4. ใส่สีและตั้งค่าการทับซ้อน (Sorting Order)
+        startLineRenderer.color = startLineColor;
+        startLineRenderer.sortingOrder = startLineSortingOrder;
+
+        // 5. หมุนภาพให้ขวางถนนพอดี
+        if (normal.sqrMagnitude > 0.001f)
+        {
+            float angle = Mathf.Atan2(normal.y, normal.x) * Mathf.Rad2Deg;
+            startLineRenderer.transform.rotation = Quaternion.Euler(0, 0, angle);
+        }
+
+        // 6. ยืดภาพให้ยาวเท่ากับความกว้างถนน
+        if (lineSprite != null && lineSprite.bounds.size.x > 0)
+        {
+            float currentImageWidth = lineSprite.bounds.size.x;
+            float scaleX = trackFullWidth / currentImageWidth;
+            // scaleX คือความกว้างให้พอดีถนน, startLineWidth คือความหนาของเส้นชัย
+            startLineRenderer.transform.localScale = new Vector3(scaleX, startLineWidth, 1f);
+        }
     }
 
-    // 🌟 ฟังก์ชันสร้างกองเชียร์ข้างสนาม
     private void SpawnCheerleaders(RouteData route)
     {
-        // ลบของเก่าทิ้งก่อน (ถ้ามีการกดยืนยัน Refresh ด่านใหม่)
         foreach (var obj in spawnedCheerleaders)
         {
-            if (obj != null) DestroyImmediate(obj); // ใช้ DestroyImmediate เพื่อให้ลบในโหมด Edit ได้
+            if (obj != null) DestroyImmediate(obj);
         }
         spawnedCheerleaders.Clear();
 
         if (route == null || !route.IsValid()) return;
 
-        // โหลด Prefab ตามชื่อที่ตั้งไว้
         GameObject cheerPrefab = Resources.Load<GameObject>(cheerPrefabPath);
         if (cheerPrefab == null)
         {
@@ -172,26 +212,20 @@ public class RoutesRenderer : MonoBehaviour
             return;
         }
 
-        // หาจุดกึ่งกลางและทิศทางของเส้นชัย (ที่จุด progress 0f)
         Vector2 center = route.EvaluatePosition(0f);
         Vector2 normal = route.EvaluateNormal(0f).normalized;
 
-        // คำนวณความกว้างครึ่งหนึ่งของถนน + ระยะห่างออกมานอกถนน
         float spawnDistance = (route.trackWidth * widthMultiplier * 0.5f) + distanceOutsideTrack;
 
-        // จุดเกิดด้านซ้ายและขวา
         Vector3 leftPos = new Vector3(center.x - normal.x * spawnDistance, center.y - normal.y * spawnDistance, 0f);
         Vector3 rightPos = new Vector3(center.x + normal.x * spawnDistance, center.y + normal.y * spawnDistance, 0f);
 
-        // สร้างกองเชียร์ฝั่งซ้าย
         GameObject cheerLeft = Instantiate(cheerPrefab, leftPos, Quaternion.identity, transform);
         cheerLeft.name = "Cheerleaders_Left";
 
-        // สร้างกองเชียร์ฝั่งขวา
         GameObject cheerRight = Instantiate(cheerPrefab, rightPos, Quaternion.identity, transform);
         cheerRight.name = "Cheerleaders_Right";
 
-        // (เผื่อไว้) ถ้าอยากให้ฝั่งซ้ายหันหน้าเข้าหาถนน สลับ FlipX ได้
         SpriteRenderer srLeft = cheerLeft.GetComponentInChildren<SpriteRenderer>();
         if (srLeft != null) srLeft.flipX = false;
 

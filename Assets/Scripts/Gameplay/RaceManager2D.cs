@@ -14,6 +14,7 @@ public class RaceManager2D : MonoBehaviour
     private const string CountSoundName = "count";
     private const string RaceSoundName = "race";
     private const string FailSoundName = "fail";
+    private const string ChickenSoundName = "chicken";
 
     [Header("Race")]
     [SerializeField] private bool isRaceEnded = false;
@@ -40,8 +41,8 @@ public class RaceManager2D : MonoBehaviour
     [SerializeField] private float runnerCollisionCameraShakeDuration = 0.28f;
     [SerializeField] private int obstacleCount = 10;
     [SerializeField] private string obstaclePrefabResourcesPath = "prefabs/obstacles";
-    [SerializeField] private int obstaclePrefabMinIndex = 0;
-    [SerializeField] private int obstaclePrefabMaxIndex = 4;
+    [SerializeField] private int obstaclePrefabMinIndex = 1;
+    [SerializeField] private int obstaclePrefabMaxIndex = 3;
     [SerializeField] private float obstacleScale = 0.2f;
     [SerializeField] private float obstacleRadius = 0.7f;
     [SerializeField] private float obstacleSpawnPaddingRatio = 0.72f;
@@ -674,7 +675,7 @@ public class RaceManager2D : MonoBehaviour
                 activeObstacles.RemoveAt(obstacleIndex);
                 if (runner == humanRunner)
                 {
-                    AudioManager.Instance?.PlaySFXOneShot(FailSoundName);
+                    AudioManager.Instance?.PlaySFXOneShot(ChickenSoundName);
                 }
 
                 if (runner == humanRunner)
