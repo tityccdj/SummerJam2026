@@ -91,11 +91,13 @@ public class SceneHelper : MonoBehaviour
         Slider slider = FindOrCreateOverHeatSlider();
 
         Image itemUI = FindExistingItemUI();
+        GameObject cooldownHint = GameObject.Find("CooldownHint");
         if (playerRunner != null)
         {
             playerRunner.ConfigureRunner("Player", true, routesRenderer, joystick, slider, totalLapCount);
             playerRunner.ResetRunnerState(0f, 0f);
             playerRunner.SetItemUI(itemUI);
+            playerRunner.SetCooldownHint(cooldownHint);
         }
         
 
@@ -109,6 +111,7 @@ public class SceneHelper : MonoBehaviour
             activeHumanRunner.ConfigureRunner("Player", true, routesRenderer, joystick, slider, totalLapCount);
             activeHumanRunner.ResetRunnerState(0f, 0f);
             activeHumanRunner.SetItemUI(itemUI);
+            activeHumanRunner.SetCooldownHint(cooldownHint);
         }
 
         BindButtons(activeHumanRunner);

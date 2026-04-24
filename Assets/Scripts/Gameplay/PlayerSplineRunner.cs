@@ -35,6 +35,7 @@ public class PlayerSplineRunner : MonoBehaviour
     [SerializeField] private Image hitFeedbackImage; // UI Image รูปไอเทมที่โดน
     [SerializeField] private TextMeshProUGUI hitFeedbackText; // UI Text ข้อความ From...
     [SerializeField] private GameObject CooldownAlertPanel;
+    [SerializeField] private GameObject CooldownHint;
     private Coroutine feedbackCoroutine;
 
     [Header("Runner")]
@@ -188,11 +189,28 @@ public class PlayerSplineRunner : MonoBehaviour
                 Debug.LogWarning($"หาภาพไอเทมไม่เจอ! กรุณาเช็กว่ามีไฟล์ชื่อ {currentItem} อยู่ใน Resources/Item/ หรือไม่");
             }
         }
+
+        if (!Utility.IsMobile())
+        {
+            Transform hint = itemUIImage.transform.parent.Find("Space");
+            hint.gameObject.SetActive(currentItem != RaceItemType.None);
+        }
     }
 
     public void SetItemUI(Image uiImage)
     {
         itemUIImage = uiImage;
+        if (!Utility.IsMobile())
+        {
+            Transform hint = itemUIImage.transform.parent.Find("Space");
+            hint.gameObject.SetActive(currentItem != RaceItemType.None);
+        }
+    }
+
+    public void SetCooldownHint(GameObject hintObject)
+    {
+        CooldownHint = hintObject;
+        if (CooldownHint != null) CooldownHint.SetActive(false);
     }
 
     public void BindSceneReferences(RoutesRenderer renderer, Joystick movementJoystick, Slider heatSlider)
@@ -625,6 +643,8 @@ public class PlayerSplineRunner : MonoBehaviour
             ApplyHeat();
             UpdateMovement(route);
             UpdateLapState(route);
+
+            CooldownHint?.SetActive(isHuman && isOverHeated);
         }
 
         UpdateVisuals();
