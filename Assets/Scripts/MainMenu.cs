@@ -6,6 +6,8 @@ public class MainMenu : MonoBehaviour
     private UIMainMenu uiMainMenu;
     [SerializeField]
     private UISetting uiSetting;
+    [SerializeField]
+    private UITutorial uiTutorial;
 
     void Start()
     {
@@ -18,6 +20,11 @@ public class MainMenu : MonoBehaviour
             {
                 uiMainMenu.gameObject.SetActive(false);
                 uiSetting.gameObject.SetActive(true);
+            },
+            onTutorial = () =>
+            {
+                uiMainMenu.gameObject.SetActive(false);
+                uiTutorial.gameObject.SetActive(true);
             },
             onExit = () => Application.Quit(),
         });
@@ -35,7 +42,16 @@ public class MainMenu : MonoBehaviour
                 uiSetting.gameObject.SetActive(false);
             },
         });
+        uiTutorial.Setup(new UITutorial.Param
+        {
+            OnBack = () =>
+            {
+                uiMainMenu.gameObject.SetActive(true);
+                uiTutorial.gameObject.SetActive(false);
+            }
+        });
         uiMainMenu.gameObject.SetActive(true);
         uiSetting.gameObject.SetActive(false);
+        uiTutorial.gameObject.SetActive(false);
     }
 }

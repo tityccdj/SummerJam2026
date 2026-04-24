@@ -8,6 +8,7 @@ public class UIMainMenu : MonoBehaviour
     {
         public Action onPlay;
         public Action onSetting;
+        public Action onTutorial;
         public Action onExit;
     }
 
@@ -15,10 +16,13 @@ public class UIMainMenu : MonoBehaviour
     private Button playButton;
     [SerializeField]
     private Button settingButton;
+    [SerializeField]
+    private Button tutorialButton;
 
     public void Setup(Param param)
     {
         playButton.onClick.AddListener(() => param.onPlay?.Invoke());
         settingButton.onClick.AddListener(() => param.onSetting?.Invoke());
+        tutorialButton.onClick.AddListener(() => param.onTutorial?.Invoke());
     }
 }
