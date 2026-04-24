@@ -27,6 +27,7 @@ public class MainMenu : MonoBehaviour
                 uiTutorial.gameObject.SetActive(true);
             },
             onExit = () => Application.Quit(),
+            version = Application.version,
         });
         uiSetting.Setup(new UISetting.Param
         {
