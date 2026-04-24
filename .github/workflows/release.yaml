@@ -2,8 +2,10 @@ name: Auto Release
 
 on:
   push:
-    branches:
-      - main
+    branches: [main]
+
+permissions:
+  contents: write   # required to create tags/releases with GITHUB_TOKEN
 
 jobs:
   release:
